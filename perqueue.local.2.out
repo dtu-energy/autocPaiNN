@@ -5,6 +5,4 @@ PQ Arguments:   {'pq_index': [1]}
 ------------------------------------------------------------------------------
 
 env_sylg
-Namespace(load_model=None, cutoff=4.0, split_file=None, val_ratio=0.1, num_interactions=4, node_size=256, output_dir='256_node_4_layer', dataset='/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz', max_steps=1500000, device=None, batch_size=20, initial_lr=0.0001, forces_weight=0.98, charge_weight=0.1, stress_weight=1.0, log_inverval=None, plateau_scheduler=True, normalization=True, atomwise_normalization=True, stop_patience=1000, random_seed=3407, compute_forces=True, compute_stress=True, compute_magmom=True, compute_bader_charge=True, log_interval=2000, ensemble={'128_node_4_layer': {'node_size': 128, 'num_interactions': 4}, '256_node_4_layer': {'node_size': 256, 'num_interactions': 4}, '512_node_4_layer': {'node_size': 512, 'num_interactions': 4}})
-batch dict_keys(['num_atoms', 'elems', 'coord', 'cell', 'pairs', 'n_diff', 'num_pairs', 'energy', 'forces', 'stress', 'magmom', 'bader_charge'])
-568
+{'pq_dwg_width': 5, 'run_list': "['NaCoPO4', 'NaFePO4', 'NaMnPO4', 'NaNiPO4', 'NaFePO4_NEB']"}

@@ -1,5 +1,5 @@
 [global]
-run_path = 'Example'
+run_path = '/home/energy/mahpe/Published_code/autocPaiNN/Example'
 random_seed = 3407
 max_iteration = 10
 
@@ -40,43 +40,50 @@ load_prev_iter_model = true
 [Simulate.MD]
 time_step = 1
 temperature = 1000
-device = 'cuda'
-start_indice = 100
-max_steps = 2000000
+device = 'cpu'
+start_indice = -1
+max_steps = 100
 min_steps = 1000
 dump_step = 100
 print_step = 1
 num_uncertain = 1000
+max_force_sd = 0.5
+force_sd_threshold = 0.2
 
 [Simulate.NEB]
-fmax = 0.05
+opt_steps = 200
+opt_fmax = 0.05
+neb_fmax = 0.05
+neb_steps = 1000
 num_img = 5
+climb = false
 friction_MD = 0.003
 temperature_MD = 1500
 time_MD = 1
 time_step_MD = 1
 print_step = 1
+device = 'cpu'
 
 [Simulate.runs.NaCoPO4]
 method = 'MD'
-init_traj = 'Example_data/NaCoPO4.traj'
+init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaCoPO4.traj'
 
 [Simulate.runs.NaFePO4]
 method = 'MD'
-init_traj = 'Example_data/NaFePO4.traj'
+init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4.traj'
 
 [Simulate.runs.NaMnPO4]
 method = 'MD'
-init_traj = 'Example_data/NaMnPO4.traj'
+init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaMnPO4.traj'
 
 [Simulate.runs.NaNiPO4]
 method = 'MD'
-init_traj = 'Example_data/NaNiPO4.traj'
+init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaNiPO4.traj'
 
 [Simulate.runs.NaFePO4_NEB]
 method = 'NEB'
-initial_image = 'Example_data/NaFePO4_init.traj'
-final_image = 'Example_data/NaFePO4_final.traj'
+initial_image = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4_init.traj'
+final_image = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4_final.traj'
 
 [select]
 kernel = "full-g"

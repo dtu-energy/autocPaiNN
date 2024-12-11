@@ -53,6 +53,7 @@ class ML_Relaxer:
         self.calc_name = calc_name
         self.calc_paths = calc_paths
         self.device = device
+        self.ensemble = False # False unless using ensemble of cPaiNN models
         self.calculator= self.get_calc()    
         self.relax_cell = relax_cell
     
@@ -142,11 +143,11 @@ class ML_Relaxer:
                 models.append(model)
             if len(models)==1:
                 print('Using single cPaiNN model')
-                ensemble = False
+                self.ensemble = False
                 calc = MLCalculator(models[0])
             elif len(models)>1:
                 print('Using ensemble of cPaiNN models')
-                ensemble = True
+                self.ensemble = True
                 calc = EnsembleCalculator(models)
             else:
                 raise ValueError('No model found')
@@ -154,7 +155,6 @@ class ML_Relaxer:
             from chgnet.model.dynamics import CHGNetCalculator
             from chgnet.model import CHGNet
             print('Using CHGNet model')
-            ensemble = False
             model = CHGNet.load()
             calc = CHGNetCalculator(model=model,use_device=self.device)
         elif self.calc_name == 'mace_large':

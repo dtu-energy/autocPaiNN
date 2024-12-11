@@ -16,12 +16,14 @@ config = toml.load(main_path/'config.toml')
 run_path = Path(config['global']['run_path'])
 if not os.path.isdir(run_path):
     os.makedirs(run_path)
+
+# Setup task directory accoring to their names in config file
 if not os.path.isdir(run_path/'train'):
     os.makedirs(run_path/'train')
-if not os.path.isdir(run_path/'simulation'):
-    os.makedirs(run_path/'simulation')
-if not os.path.isdir(run_path/'al_select'):
-    os.makedirs(run_path/'al_select')
+if not os.path.isdir(run_path/'Simulate'):
+    os.makedirs(run_path/'Simulate')
+if not os.path.isdir(run_path/'select'):
+    os.makedirs(run_path/'select')
 if not os.path.isdir(run_path/'labeling'):
     os.makedirs(run_path/'labeling')
 

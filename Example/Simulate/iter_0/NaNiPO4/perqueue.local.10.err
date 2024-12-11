@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/energy/mahpe/perqueue/perqueue/runner.py", line 182, in <module>
+    _main()
+  File "/home/energy/mahpe/perqueue/perqueue/runner.py", line 163, in _main
+    raise e
+  File "/home/energy/mahpe/perqueue/perqueue/runner.py", line 149, in _main
+    success, result = main(**args)
+                      ^^^^^^^^^^^^
+TypeError: main() got an unexpected keyword argument 'cfg'

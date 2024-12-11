@@ -546,7 +546,6 @@ def main(cfg, **kwargs):
     # Load argument Namespace
     args = get_arguments()
     update_namespace(args, params)
-    print(args)
 
     # Creating the iteration folder
     if ITER_KW not in kwargs:
@@ -554,6 +553,13 @@ def main(cfg, **kwargs):
     else:
         iter_idx, *_ = kwargs[ITER_KW]
         iter_idx += 1
+        
+        # Try to find model from previous iteration
+        if params['load_prev_iter_model']:
+            # Load the previous iteration MD trajectory 
+            MLP_path = os.path.join(run_dir,task_name, f'iter_{iter_idx-1}',args.output_dir)
+            if os.path.exists(MLP_path):
+                args.load_model = MLP_path
     
     # Get run path
     run_dir = main_params['global']['run_path']
@@ -830,7 +836,7 @@ def main(cfg, **kwargs):
                     # Find simulation keys
                     run_list = list(main_params['Simulate']['runs'].keys())
                     dmkey = len(run_list)
-                    return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey,'run_list':run_list}
+                    return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey,'run_list':str(run_list)}
                     return True , return_parameters
 
             step += 1
@@ -862,7 +868,7 @@ def main(cfg, **kwargs):
                 # Find simulation keys
                 run_list = list(main_params['Simulate']['runs'].keys())
                 dmkey = len(run_list)
-                return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey,'run_list':run_list}
+                return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey,'run_list':str(run_list)}
                 return True , return_parameters
 
 if __name__ == "__main__":
