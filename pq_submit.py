@@ -12,16 +12,27 @@ main_path = Path('./') # path to the auto-cPaiNN code
 ### Load config file ###
 config = toml.load(main_path/'config.toml')
 
-print(config)
+### Setup folders at the run directory ###
+run_path = Path(config['global']['run_path'])
+if not os.path.isdir(run_path):
+    os.makedirs(run_path)
+if not os.path.isdir(run_path/'train'):
+    os.makedirs(run_path/'train')
+if not os.path.isdir(run_path/'simulation'):
+    os.makedirs(run_path/'simulation')
+if not os.path.isdir(run_path/'al_select'):
+    os.makedirs(run_path/'al_select')
+if not os.path.isdir(run_path/'labeling'):
+    os.makedirs(run_path/'labeling')
 
 ### Task resources ###
-Train_resources = "8:sm3090el8:12h"
-Simulation_resources = "8:sm3090el8:12h"
-Activelearning_resources = "8:sm3090el8:12h"
-Labeling_resources = "24:xeon24el8_test:30m"
+Train_resources = '1:local:10m'
+Simulation_resources = '1:local:10m'
+Activelearning_resources = '1:local:10m'
+Labeling_resources = '1:local:10m'
 
 ### Set Tasks ###
-main_argument = ['--config', main_path/'config.toml']
+main_argument = {'cfg':str(main_path/'config.toml')}
 
 Train = Task(main_path/'workflow/train.py', name='Train MLP model', args=main_argument, resources=Train_resources)
 Simulation = Task(main_path/'workflow/simulation.py', name='Run ML simulation', args=main_argument, resources=Simulation_resources)
@@ -48,9 +59,8 @@ dwg_train = DynamicWidthGroup([Train])
 cg = CyclicalGroup([dwg_labeling, dwg_train], max_tries=config['global']['max_iteration'])
 
 ### Set Workflow ###
-
 wf = Workflow({swg:[], cg:[swg]})
 
 ### Submit Workflow ###
-#with PersistentQueue() as pq:
-#    pq.submit(wf)
+with PersistentQueue() as pq:
+    pq.submit(wf)

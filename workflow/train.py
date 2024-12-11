@@ -13,6 +13,8 @@ import time
 from cPaiNN.data import AseDataset, collate_atomsdata
 from cPaiNN.model import PainnModel
 
+from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
+
 # Funciton to setup random seed
 def setup_seed(seed):
      torch.manual_seed(seed)
@@ -98,6 +100,7 @@ def get_arguments(arg_list=None):
         "--stress_weight",
         type=float,
         help="Weight for stress representation",
+        default=1.0
     )
     parser.add_argument(
         "--log_inverval",
@@ -139,23 +142,19 @@ def get_arguments(arg_list=None):
         "--compute_stress",
         type=bool,
         help="Compute stress",
-        #default=True,
+        default=True,
     )
     parser.add_argument(
         "--compute_magmom",
         type=bool,
         help="Compute magnetic moments",
+        default=False,
     )     
     parser.add_argument(
         "--compute_bader_charge",
         type=bool,
         help="Compute bader charges",
-    )
-    parser.add_argument(
-        "--cfg",
-        type=str,
-        help="Path to config file. e.g. 'arguments.toml'",
-        default='config.toml'
+        default=False,
     )
     return parser.parse_args(arg_list)
 
@@ -523,18 +522,51 @@ class EarlyStopping() :
                 
         return self.early_stop
 
-def main():
+def main(cfg, **kwargs):
+
+    # Load perqueue index
+    idx, *_ =kwargs[INDEX_KW]
+    
+    # Load all parameters from config file
+    with open(cfg, 'r') as f:
+        main_params = toml.load(f)
+    
+    # Load local parameters
+    task_name = 'train'
+    params = main_params[task_name]
+    # Update the random seed
+    params['random_seed'] = main_params['global']['random_seed']
+    
+    # If ensemble training is used, update the parameters and rename model output
+    if 'ensemble' in params:
+        ensemble_keys = list(params['ensemble'].keys())
+        params.update(params['ensemble'][ensemble_keys[idx]])
+        params['output_dir'] = ensemble_keys[idx]
+    
     # Load argument Namespace
     args = get_arguments()
+    update_namespace(args, params)
+    print(args)
 
-    # Load parameters from config file
-    if os.path.exists(args.cfg):
-        with open(args.cfg, 'r') as f:
-            params = toml.load(f)
+    # Creating the iteration folder
+    if ITER_KW not in kwargs:
+        iter_idx = 0
+    else:
+        iter_idx, *_ = kwargs[ITER_KW]
+        iter_idx += 1
     
-        # Update namespace with parameters
-        update_namespace(args, params)
-    
+    # Get run path
+    run_dir = main_params['global']['run_path']
+    iter_dir = os.path.join(run_dir,task_name, f'iter_{iter_idx}')
+
+    # Create the iteration directory
+    try:
+        os.makedirs(iter_dir)
+    except FileExistsError:
+        pass
+    # Move to the iteration directory
+    os.chdir(iter_dir)
+
     # Setup random seed
     setup_seed(args.random_seed)
 
@@ -681,22 +713,9 @@ def main():
             print('batch',batch.keys())
             # Reset gradient
             optimizer.zero_grad()
-            #print(batch['stress'].shape,batch['stress'])
-            #print(batch.keys())
-            #print('num_atoms',batch['num_atoms'].shape)
-            #print('forces',batch['forces'].shape)
-            #print('coord',batch['coord'].shape)
-            #print('elems',batch['elems'].shape)
-            #atch['cell'] = torch.reshape(batch['cell'], (args.batch_size, 3, 3))
-            #strain = torch.zeros_like(batch['cell'], requires_grad=True)
-            #batch['cell'] = batch['cell'] + torch.matmul(strain, batch['cell'])
             
             # Forward pass 
-            outputs = net(batch)            
-            #print(outputs[charge_key].shape, outputs['energy'].shape, outputs['forces'].shape)
-            #print(batch[charge_key].shape, batch['energy'].shape, batch['forces'].shape)
-            
-            # Reshape stress tensor
+            outputs = net(batch)   
             
             # Compute loss
             # Energy loss
@@ -805,7 +824,14 @@ def main():
                         os.path.join(args.output_dir, "best_model.pth"),
                     )
                 else:
-                    sys.exit(0)
+                    # Early stopping
+                    logging.info("Early stopping")
+                    
+                    # Find simulation keys
+                    run_list = list(main_params['Simulate']['runs'].keys())
+                    dmkey = len(run_list)
+                    return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey,'run_list':run_list}
+                    return True , return_parameters
 
             step += 1
 
@@ -833,7 +859,11 @@ def main():
                     },
                     os.path.join(args.output_dir, "exit_model.pth"),
                 )
-                sys.exit(0)
+                # Find simulation keys
+                run_list = list(main_params['Simulate']['runs'].keys())
+                dmkey = len(run_list)
+                return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey,'run_list':run_list}
+                return True , return_parameters
 
 if __name__ == "__main__":
     main()

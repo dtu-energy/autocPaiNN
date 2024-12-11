@@ -1,0 +1,39 @@
+2024-12-11 20:55:38,707 [INFO ]  Computing magnetic moments and bader charges
+2024-12-11 20:55:38,709 [INFO ]  Using device: cpu
+2024-12-11 20:55:38,709 [INFO ]  loading data /home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz
+2024-12-11 20:56:26,147 [INFO ]  Dataset size: 113532, training set size: 102178, validation set size: 11354
+2024-12-11 20:56:26,147 [INFO ]  Computing mean and variance
+2024-12-11 20:57:49,594 [DEBUG]  target_mean=-6.516045, target_stddev=0.441116
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/energy/mahpe/perqueue/perqueue/runner.py", line 182, in <module>
+    _main()
+  File "/home/energy/mahpe/perqueue/perqueue/runner.py", line 149, in _main
+    success, result = main(**args)
+                      ^^^^^^^^^^^^
+  File "/home/energy/mahpe/Published_code/autocPaiNN/workflow/train.py", line 776, in main
+    eval_dict = eval_model(net, val_loader, device, args,criterion=criterion)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/energy/mahpe/Published_code/autocPaiNN/workflow/train.py", line 339, in eval_model
+    out = model(device_batch)
+          ^^^^^^^^^^^^^^^^^^^
+  File "/home/energy/mahpe/anaconda3/envs/env_sylg/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/energy/mahpe/anaconda3/envs/env_sylg/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/energy/mahpe/Published_code/autocPaiNN/cPaiNN/model.py", line 371, in forward
+    node_scalar, node_vector = message_layer(node_scalar, node_vector, edge, edge_diff, edge_dist)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/energy/mahpe/anaconda3/envs/env_sylg/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/energy/mahpe/anaconda3/envs/env_sylg/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/energy/mahpe/Published_code/autocPaiNN/cPaiNN/model.py", line 107, in forward
+    edge_vector = gate_edge_vector.unsqueeze(1) * (edge_diff / edge_dist.unsqueeze(-1)).unsqueeze(-1)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

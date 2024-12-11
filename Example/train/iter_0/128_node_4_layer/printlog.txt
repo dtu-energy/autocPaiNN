@@ -1,0 +1,7 @@
+2024-12-11 20:55:38,707 [INFO ]  Computing magnetic moments and bader charges
+2024-12-11 20:55:38,709 [INFO ]  Using device: cpu
+2024-12-11 20:55:38,709 [INFO ]  loading data /home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz
+2024-12-11 20:56:26,191 [INFO ]  Dataset size: 113532, training set size: 102178, validation set size: 11354
+2024-12-11 20:56:26,191 [INFO ]  Computing mean and variance
+2024-12-11 20:57:49,883 [DEBUG]  target_mean=-6.516045, target_stddev=0.441116
+2024-12-11 21:01:41,148 [INFO ]  step=0, energy_mae=13.67506, energy_rmse=20.03721, forces_l2_mae=1.46216, forces_l2_rmse=1.95564, forces_mae=0.72582, forces_rmse=1.12909, stress_mae=0.00221, stress_rmse=0.00551, magmom_mae=0.57578, magmom_rmse=1.14150, bader_charge_mae=2.19471, bader_charge_rmse=2.62690, sqrt(val_loss)=3.20434, sqrt(train_loss)=3.082, sqrt(smooth_loss)=1.790, patience=  0, training time=0.020 min, eval time=3.829 min

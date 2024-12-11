@@ -1,34 +1,43 @@
 [global]
-run_dir = '.'
+run_path = 'Example'
 random_seed = 3407
 max_iteration = 10
 
 [train]
 cutoff = 4.0
 val_ratio = 0.1
-num_interactions = 3
-node_size = 128
+node_size = 64 
+num_interactions = 4
 output_dir = 'model_output'
 dataset = '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz'
-max_steps = 3000000
-device = 'cuda'
-batch_size = 16
+max_steps = 1500000
+batch_size = 20
 initial_lr = 0.0001
 forces_weight = 0.98
-log_interval = 1000
-normalization = true
-atomwise_normalization = true
-stop_patience = 1000
+charge_weight = 0.1
+stress_weight = 1000
+log_interval = 2000
+
 plateau_scheduler = true
-random_seed = 3407
+normalization = true 
+atomwise_normalization = true 
+stop_patience = 1000
+
+random_seed = 0
+compute_forces = true
+compute_stress = true
+compute_magmom=true
+compute_bader_charge=true
+
+stop_after_train = false
+load_prev_iter_model = true
 
 [train.ensemble]
 128_node_4_layer = {node_size = 128, num_interactions = 4}
 256_node_4_layer = {node_size = 256, num_interactions = 4}
 512_node_4_layer = {node_size = 512, num_interactions = 4}
 
-[MD.runs.NaCoPO4]
-init_traj = '/home/energy/mahpe/Published_code/auto-cPaiNN/Example_data/NaCoPO4.traj'
+[Simulate.MD]
 time_step = 1
 temperature = 1000
 device = 'cuda'
@@ -38,92 +47,61 @@ min_steps = 1000
 dump_step = 100
 print_step = 1
 num_uncertain = 1000
-random_seed = 3407
 
-[MD.runs.NaFePO4]
-init_traj = '/home/energy/mahpe/Published_code/auto-cPaiNN/Example_data/NaFePO4.traj'
-time_step = 1
-temperature = 1000
-device = 'cuda'
-start_indice = 100
-max_steps = 2000000
-min_steps = 1000
-dump_step = 100
+[Simulate.NEB]
+fmax = 0.05
+num_img = 5
+friction_MD = 0.003
+temperature_MD = 1500
+time_MD = 1
+time_step_MD = 1
 print_step = 1
-num_uncertain = 1000
-random_seed = 3407
 
-[MD.runs.NaMnPO4]
-init_traj = '/home/energy/mahpe/Published_code/auto-cPaiNN/Example_data/NaMnPO4.traj'
-time_step = 1
-temperature = 1000
-device = 'cuda'
-start_indice = 100
-max_steps = 2000000
-min_steps = 1000
-dump_step = 100
-print_step = 1
-num_uncertain = 1000
-random_seed = 3407
+[Simulate.runs.NaCoPO4]
+method = 'MD'
+init_traj = 'Example_data/NaCoPO4.traj'
 
-[MD.runs.NaNiPO4]
-init_traj = '/home/energy/mahpe/Published_code/auto-cPaiNN/Example_data/NaNiPO4.traj'
-time_step = 1
-temperature = 1000
+[Simulate.runs.NaFePO4]
+method = 'MD'
+init_traj = 'Example_data/NaFePO4.traj'
+
+[Simulate.runs.NaMnPO4]
+method = 'MD'
+init_traj = 'Example_data/NaMnPO4.traj'
+
+[Simulate.runs.NaNiPO4]
+method = 'MD'
+init_traj = 'Example_data/NaNiPO4.traj'
+
+[Simulate.runs.NaFePO4_NEB]
+method = 'NEB'
+initial_image = 'Example_data/NaFePO4_init.traj'
+final_image = 'Example_data/NaFePO4_final.traj'
+
+[select]
+kernel = "full-g"
+selection = "lcmd_greedy"
+n_random_features = 500
+batch_size = 50
 device = 'cuda'
-start_indice = 100
-max_steps = 2000000
-min_steps = 1000
-dump_step = 100
-print_step = 1
-num_uncertain = 1000
-random_seed = 3407
 
 [select.runs.NaCoPO4]
 method= 'MD' 
-train_set =  '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' 
-kernel = "full-g"
-selection = "lcmd_greedy"
-n_random_features = 500
-batch_size = 50
-device = 'cuda'
-random_seed = 3407
 
 [select.runs.NaFePO4]
 method= 'MD' 
-train_set =  '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' 
-kernel = "full-g"
-selection = "lcmd_greedy"
-n_random_features = 500
-batch_size = 50
-device = 'cuda'
-random_seed = 3407
 
 [select.runs.NaMnPO4]
 method= 'MD' 
-train_set =  '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' 
-kernel = "full-g"
-selection = "lcmd_greedy"
-n_random_features = 500
-batch_size = 50
-device = 'cuda'
-random_seed = 3407
 
 [select.runs.NaNiPO4]
 method= 'MD' 
-train_set =  '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' 
-kernel = "full-g"
-selection = "lcmd_greedy"
-n_random_features = 500
-batch_size = 50
-device = 'cuda'
-random_seed = 3407
 
+[select.runs.NaFePO4_NEB]
+method= 'MD' 
 
 [labeling] 
 train_set = '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' 
-
-[labeling.runs]
 method='VASP'
 
 [labeling.runs.NaCoPO4]
@@ -141,4 +119,8 @@ ldau_luj = {'Mn'= {'L'= 2, 'U'= 3.9, 'J'= 0}}
 [labeling.runs.NaNiPO4]
 nupdown = 32
 ldau_luj = {'Ni'= {'L'= 2, 'U'= 6.2, 'J'= 0}}
+
+[labeling.runs.NaFePO4_NEB]
+nupdown = 64
+ldau_luj = {'Fe'= {'L'= 2, 'U'= 5.3, 'J'= 0}}
 
