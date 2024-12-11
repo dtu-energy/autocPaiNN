@@ -1,0 +1,92 @@
+[global]
+root = '.'
+random_seed = 3407
+
+[train]
+cutoff = 4.0
+val_ratio = 0.1
+num_interactions = 3
+node_size = 128
+output_dir = 'model_output'
+dataset = '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz'
+max_steps = 3000000
+device = 'cuda'
+batch_size = 16
+initial_lr = 0.0001
+forces_weight = 0.98
+log_interval = 1000
+normalization = true
+atomwise_normalization = true
+stop_patience = 1000
+plateau_scheduler = true
+random_seed = 3407
+
+[train.ensemble]
+128_node_4_layer = {node_size = 128, num_interactions = 4}
+256_node_4_layer = {node_size = 256, num_interactions = 4}
+512_node_4_layer = {node_size = 512, num_interactions = 4}
+
+[train.resource] 
+nodename = 'sm3090el8'
+tmax = '7d'
+cores = 8
+
+[MD.runs.0_Fe_Fe4Na4O16P4]
+init_traj = '/home/energy/mahpe/NaMPO4_olivine_FeMnCoNi/md_sim_newversion/0_Fe_Fe4Na4O16P4/MD.traj'
+time_step = 1
+temperature = 1000
+device = 'cuda'
+start_indice = 100
+max_steps = 2000000
+min_steps = 1000
+dump_step = 100
+print_step = 1
+num_uncertain = 1000
+random_seed = 3407
+
+[MD.resource] 
+nodename = 'sm3090el8'
+tmax = '7d'
+cores = 8
+
+[select.runs]
+0_Co_Co4Na4O16P4 = { method= 'MD' ,train_set =  '/home/scratch3/mahpe/NaMPO4/data_md_newversion.traj' ,kernel = "full-g",selection = "lcmd_greedy",n_random_features = 500,batch_size = 50,device = 'cuda',random_seed = 3407,
+
+0_Fe_Fe4Na4O16P4 = { method= 'MD' ,train_set =  '/home/scratch3/mahpe/NaMPO4/data_md_newversion.traj' ,kernel = "full-g",selection = "lcmd_greedy",n_random_features = 500,batch_size = 50,device = 'cuda',random_seed = 3407,
+
+0_Mn_Mn4Na4O16P4 = { method= 'MD' ,train_set =  '/home/scratch3/mahpe/NaMPO4/data_md_newversion.traj' ,kernel = "full-g",selection = "lcmd_greedy",n_random_features = 500,batch_size = 50,device = 'cuda',random_seed = 3407,
+
+0_Ni_Ni4Na4O16P4 = { method= 'MD' ,train_set =  '/home/scratch3/mahpe/NaMPO4/data_md_newversion.traj' ,kernel = "full-g",selection = "lcmd_greedy",n_random_features = 500,batch_size = 50,device = 'cuda',random_seed = 3407,
+
+[select.resource] 
+nodename = 'sm3090el8'
+tmax = '7d'
+cores = 8
+
+[labeling] 
+train_set = '/home/scratch3/mahpe/NaMPO4/data_md_newversion.traj' 
+
+[labeling.runs]
+method='VASP'
+
+[labeling.runs.0_Fe_Fe4Na4O16P4]
+nupdown = 64
+ldau_luj = {'Fe'= {'L'= 2, 'U'= 5.3, 'J'= 0}}
+
+[labeling.runs.0_Mn_Mn4Na4O16P4]
+nupdown = 80
+ldau_luj = {'Mn'= {'L'= 2, 'U'= 3.9, 'J'= 0}}
+
+[labeling.runs.0_Ni_Ni4Na4O16P4]
+nupdown = 32
+ldau_luj = {'Ni'= {'L'= 2, 'U'= 6.2, 'J'= 0}}
+
+[labeling.runs.0_Co_Co4Na4O16P4]
+nupdown = 48
+ldau_luj = {'Co'= {'L'= 2, 'U'= 3.32, 'J'= 0}}
+
+[labeling.resource] 
+nodename = 'xeon40'
+tmax = '2d'
+cores = 40
+
