@@ -20,8 +20,8 @@ if not os.path.isdir(run_path):
 # Setup task directory accoring to their names in config file
 if not os.path.isdir(run_path/'train'):
     os.makedirs(run_path/'train')
-if not os.path.isdir(run_path/'Simulate'):
-    os.makedirs(run_path/'Simulate')
+if not os.path.isdir(run_path/'simulate'):
+    os.makedirs(run_path/'simulate')
 if not os.path.isdir(run_path/'select'):
     os.makedirs(run_path/'select')
 if not os.path.isdir(run_path/'labeling'):
@@ -30,7 +30,7 @@ if not os.path.isdir(run_path/'labeling'):
 ### Task resources ###
 Train_resources = '1:local:10m'
 Simulation_resources = '1:local:10m'
-Activelearning_resources = '1:local:10m'
+Activelearning_resources = '1:local:30m'
 Labeling_resources = '1:local:10m'
 
 ### Set Tasks ###

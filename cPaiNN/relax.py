@@ -145,10 +145,12 @@ class ML_Relaxer:
                 print('Using single cPaiNN model')
                 self.ensemble = False
                 calc = MLCalculator(models[0])
+                self.models = model
             elif len(models)>1:
                 print('Using ensemble of cPaiNN models')
                 self.ensemble = True
                 calc = EnsembleCalculator(models)
+                self.models = models
             else:
                 raise ValueError('No model found')
         elif self.calc_name == 'chgnet':
@@ -157,28 +159,34 @@ class ML_Relaxer:
             print('Using CHGNet model')
             model = CHGNet.load()
             calc = CHGNetCalculator(model=model,use_device=self.device)
+            self.models = model
         elif self.calc_name == 'mace_large':
             from mace.calculators import mace_mp
             print('Using Mace-MP-0 large model')
             calc = mace_mp(model="large", dispersion=False, default_dtype="float64", device=self.device)
+            self.models = None
         elif self.calc_name == 'mace_medium':
             from mace.calculators import mace_mp
             print('Using Mace-MP-0 medium model')
             calc = mace_mp(model="medium", dispersion=False, default_dtype="float64", device=self.device)
+            self.models = None
         elif self.calc_name == 'mace_small':
             from mace.calculators import mace_mp
             print('Using Mace-MP-0 small model')
             calc = mace_mp(model="small", dispersion=False, default_dtype="float64", device=self.device)
+            self.models = None
         elif self.calc_name == 'mace_model':
             from mace.calculators import MACECalculator
             print('Using Mace personal model')
             calc =  MACECalculator(model_paths=self.calc_paths,device=self.device, default_dtype="float64")
+            self.models = None
         
         elif self.calc_name == 'm3gnet':
             from m3gnet.models import Potential, M3GNet, M3GNetCalculator
             potential = Potential(M3GNet.load())
             print('Using M3GNet model')
             calc = M3GNetCalculator(potential=potential, stress_weight=0.01)
+            self.models = potential
         else:
             raise RuntimeError('Calculator not found!')
         return calc

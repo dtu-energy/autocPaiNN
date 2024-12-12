@@ -1,0 +1,8 @@
+Perqueue key:   9
+Code:           /home/energy/mahpe/Published_code/autocPaiNN/workflow/al_select.py
+User Arguments: {'cfg': 'config.toml', 'system_name': 'NaFePO4_NEB'}
+PQ Arguments:   {'pq_iteration': [0], 'pq_index': [4]}
+------------------------------------------------------------------------------
+
+/home/energy/mahpe/Published_code/autocPaiNN/Example/train/iter_0
+Using ensemble of cPaiNN models

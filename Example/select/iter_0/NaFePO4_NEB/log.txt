@@ -1,0 +1,6 @@
+2024-12-12 02:24:23,876 [INFO ]  Selected system: NaFePO4_NEB
+2024-12-12 02:24:23,877 [INFO ]  Selected method: NEB
+2024-12-12 02:24:23,877 [INFO ]  Loding the dataset from ['/home/energy/mahpe/Published_code/autocPaiNN/Example/simulate/iter_0/NaFePO4_NEB/NEB_MD.traj'] and /home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz
+2024-12-12 02:24:24,336 [INFO ]  Train set size: 1000
+2024-12-12 02:24:24,336 [INFO ]  Pool set size: 21
+2024-12-12 02:24:24,336 [INFO ]  Selecting 10 structures

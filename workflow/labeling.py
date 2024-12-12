@@ -11,9 +11,12 @@ from pathlib import Path
 from ase.calculators.calculator import CalculationFailed
 #from gpaw import GPAW, KohnShamConvergenceError
 
+from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
+
+
 def get_arguments(arg_list=None):
     parser = argparse.ArgumentParser(
-        description="General Active Learning", fromfile_prefix_chars="+"
+        description="DFT labeling of the selected datset", fromfile_prefix_chars="+"
     )
     parser.add_argument(
         "--label_set",
@@ -36,11 +39,6 @@ def get_arguments(arg_list=None):
         help="Path to json file that stores indices selected in pool set",
     )
     parser.add_argument(
-        "--num_jobs",
-        type=int,
-        help="Number of DFT jobs",
-    )
-    parser.add_argument(
         "--job_order",
         type=int,
         help="Split DFT jobs to several different parts",
@@ -59,20 +57,54 @@ def update_namespace(ns, d):
         if not isinstance(v, dict):
             ns.__dict__[k] = v
 
-def main():
+def main(cfg,system_name,**kwargs):
+    # Load iteration index
+    iter_idx,*_ = kwargs[ITER_KW]
+
+    with open(cfg, 'r') as f:
+        main_params = toml.load(f)
+    
+    # Load local parameters
+    task_name = 'labeling'
+    params = main_params[task_name]
+
+    # Load the system parameters
+    system_params = params['runs'][system_name]
+        
+    # Update the main parameters with the system parameters
+    params.update(system_params)
+
+    # Set the data set selected by the active learning 
+    run_path = main_params['global']['run_path']
+    al_path = os.path.join(run_path,'select', f'iter_{iter_idx}',system_name)
+    params['al_info'] = os.path.join(al_path,'selected.json')
+
+    # Get the pool set and the selected indices
+    with open(params['al_info']) as f:
+        params['pool_set'] = json.load(f)['dataset']  
+        al_indices = json.load(f)["selected"]  
+    
+    # Get namepsace and update it with the parameters
     args = get_arguments()
-    if args.cfg:
-        with open(args.cfg, 'r') as f:
-            params = toml.load(f)
-        # Set the data set selected by the active learning 
-        with open(params['al_info']) as f:
-            params['pool_set'] = json.load(f)['dataset'] #[f'{root}/md/iter_{iteration}/{name}/MD.traj', f'{root}/md/iter_{iteration}/{name}/warning_struct.traj']            
-        update_namespace(args, params)
+    update_namespace(args, params)
+
+    # System directory
+    run_path = main_params['global']['run_path']
+    system_dir = os.path.join(run_path,task_name, f'iter_{iter_idx}',system_name)
+    # Move to the system directory and run the simulation
+    if not os.path.exists(system_dir):
+        os.makedirs(system_dir)
+    os.chdir(system_dir)
+
+    # Save parsed arguments
+    with open(os.path.join( "arguments.json"), "w") as f:
+        json.dump(vars(args), f)
 
     # Set up dataframe and load possible converged data id's
     db = connect('dft_structures.db')
-    db_al_ind = [row.al_ind for row in db.select([('converged','=','True')])] #
-    # get images and set parameters
+    db_al_ind = [row.al_ind for row in db.select([('converged','=','True')])]
+    
+    # Get images and set parameters
     if args.label_set:
         images = read(args.label_set, index = ':')
     elif args.pool_set:
@@ -80,20 +112,14 @@ def main():
             pool_traj = []
             for pool_path  in args.pool_set:
                 if Path(pool_path).stat().st_size > 0:
-                    pool_traj += read(pool_path, ':')
+                    pool_traj += read(pool_path, index=':')
         else:
-            pool_traj = Trajectory(args.pool_set)
-        
-        with open(args.al_info) as f:
-            indices = json.load(f)["selected"]
+            pool_traj = read(args.pool_set,index=':')
         
         if db_al_ind:
-            _,rm,_ = np.intersect1d(indices, db_al_ind,return_indices=True)
-            indices = np.delete(indices,rm)
-        if args.num_jobs:
-            split_idx = np.array_split(indices, args.num_jobs)
-            indices = split_idx[args.job_order]
-        images = [pool_traj[i] for i in indices]        
+            _,rm,_ = np.intersect1d(al_indices, db_al_ind,return_indices=True)
+            al_indices = np.delete(al_indices,rm)
+        images = [pool_traj[i] for i in al_indices]        
     else:
         raise RuntimeError('Valid configarations for DFT calculation should be provided!')
     
@@ -116,7 +142,7 @@ def main():
         calc = Vasp(**vasp_params)
         unconverged_idx = []
         for i, atoms in enumerate(images):
-            al_ind = indices[i]
+            al_ind = al_indices[i]
             atoms.set_pbc([True,True,True])
             atoms.set_calculator(calc)
             try:
@@ -149,7 +175,7 @@ def main():
         calc.set(txt='GPAW.txt')
         unconverged_idx = []
         for i, atoms in enumerate(images):
-            al_ind = indices[i]
+            al_ind = al_indices[i]
             atoms.set_pbc([True,True,True])
             atoms.set_calculator(calc)
             try:

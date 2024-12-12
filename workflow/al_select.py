@@ -1,15 +1,17 @@
-from PaiNN.data import AseDataset, collate_atomsdata
-from PaiNN.model import PainnModel
+from cPaiNN.data import AseDataset, collate_atomsdata
+from cPaiNN.model import PainnModel
+from cPaiNN.relax import ML_Relaxer
 import torch
 import numpy as np
-from PaiNN.active_learning import GeneralActiveLearning
+from cPaiNN.active_learning import GeneralActiveLearning
 import os 
-import math
-import glob
 import json
 import argparse, toml
 from pathlib import Path
+import logging
 from ase.io import read, write, Trajectory
+
+from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
 
 def setup_seed(seed):
      torch.manual_seed(seed)
@@ -54,9 +56,15 @@ def get_arguments(arg_list=None):
         help="How many data points should be selected",
     )
     parser.add_argument(
-        "--load_model",
+        "--model_path",
         type=str,
         help="Where to find the models",
+    )
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        help="Name of the model. Default is cpainn",
+        default='cpainn',
     )
     parser.add_argument(
         "--dataset", type=str, help="Path to ASE trajectory",
@@ -82,13 +90,6 @@ def get_arguments(arg_list=None):
         type=int,
         help="Random seed for this run",
     )
-    parser.add_argument(
-        "--cfg",
-        type=str,
-        default="arguments.toml",
-        help="Path to config file. e.g. 'arguments.toml'"
-    )
-
     return parser.parse_args(arg_list)
 
 def update_namespace(ns, d):
@@ -96,67 +97,104 @@ def update_namespace(ns, d):
         if not ns.__dict__.get(k):
             ns.__dict__[k] = v
 
-def main():
-    args = get_arguments()
-    if args.cfg:
-        with open(args.cfg, 'r') as f:
-            params = toml.load(f)
-        update_namespace(args, params)
+def main(cfg,system_name,**kwargs):
+    # Load iteration index
+    iter_idx,*_ = kwargs[ITER_KW]
     
+    # Load all parameters from config file
+    with open(cfg, 'r') as f:
+        main_params = toml.load(f)
+
+    # Load local parameters
+    task_name = 'select'
+    params = main_params[task_name]
+
+    # Add random seed and model path to the trained MLPs
+    params['random_seed'] = main_params['global']['random_seed']
+    run_path = main_params['global']['run_path']
+    params['model_path'] = os.path.join(run_path,'train', f'iter_{iter_idx}')
+    
+    # Load the system parameters
+    system_params = params['runs'][system_name]
+    method = system_params['method']
+    params['method'] = method
+
+    # Find the system dataset and update the parameters
+    sytem_path = os.path.join(run_path,'simulate', f'iter_{iter_idx}',system_name)
+    if method == 'MD':
+        pool_set = [os.path.join(sytem_path,'MD.traj'),os.path.join(sytem_path,'warning_struct.traj')]
+    elif method == 'NEB':
+        pool_set = [os.path.join(sytem_path,'NEB_MD.traj')]
+        args_system_simulate = json.load(open(os.path.join(sytem_path,'arguments.json')))
+        neb_img = args_system_simulate['num_img'] + 2 # Including initial and final image
+    
+    params['pool_set'] = pool_set 
+    # Update the main parameters with the system parameters
+    params.update(system_params)
+
+    # Get the Namespace and update the parameters
+    args = get_arguments()
+    update_namespace(args, params)
+
     setup_seed(args.random_seed)
 
+    # System directory
+    run_path = main_params['global']['run_path']
+    system_dir = os.path.join(run_path,task_name, f'iter_{iter_idx}',system_name)
+    # Move to the system directory and run the simulation
+    if not os.path.exists(system_dir):
+        os.makedirs(system_dir)
+    os.chdir(system_dir)
+
+    # Save parsed arguments
+    with open(os.path.join( "arguments.json"), "w") as f:
+        json.dump(vars(args), f)
+
     # Load models
-    model_pth = Path(args.load_model).rglob('*best_model.pth')
-    models = []
-    for each in model_pth:
-        state_dict = torch.load(each) 
-        model = PainnModel(
-            num_interactions=state_dict["num_layer"], 
-            hidden_state_size=state_dict["node_size"], 
-            cutoff=state_dict["cutoff"],
-        )
-        model.to(args.device)
-        model.load_state_dict(state_dict["model"])    
-        models.append(model)
-        
-    # Load dataset
-    if args.dataset:
-        with open(args.split_file, 'r') as f:
-            datasplits = json.load(f)
-            
-        dataset = AseDataset(args.dataset, cutoff=models[0].cutoff)
-        data_dict = {
-            'pool': torch.utils.data.Subset(dataset, datasplits['pool']),
-            'train': torch.utils.data.Subset(dataset, datasplits['train']),
-        }
-    elif args.pool_set and args.train_set:
-        if isinstance(args.pool_set, list):
-            dataset = []
-            for traj in args.pool_set:
-                if Path(traj).stat().st_size > 0:
-                    dataset += read(traj, index=':') 
-        else:
-            if args.neb_init and args.method == 'NEB': # If we want to label the first N images in NEB
-                # Load the number of NEB images
-                txt_sep = params['pool_set'].split('/')
-                neb_path = os.path.join('/',*txt_sep[:-1],'arguments.toml')
-                with open(neb_path, 'r') as file:
-                    params_neb = toml.load(file)
-                neb_img = int(params_neb['num_img']+2)
-                dataset = read(args.pool_set,index=f'{neb_img}:')
-            else:
-                dataset = args.pool_set
-        data_dict = {
-            'pool': AseDataset(dataset, cutoff=models[0].cutoff),
-            'train': AseDataset(args.train_set, cutoff=models[0].cutoff),
-        }
-    else:
-        raise RuntimeError("Please give valid pool data set for selection!")
+    ML_class = ML_Relaxer(calc_name=args.model_name,calc_paths=args.model_path,device=args.device)
+    if not ML_class.ensemble:
+        raise NotImplementedError("Only ensemble training is supported at the moment")
+    models = ML_class.models
+
+    # Test if models is a list and there is a pool set and train set
+    assert isinstance(models, list)
+    assert args.pool_set and args.train_set 
+
+    # set logger
+    # Setup logging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
+        handlers=[
+            logging.FileHandler(
+                "log.txt", mode="w"
+            ),
+            logging.StreamHandler(),
+        ],
+    )
+
+    logging.info(f"Selected system: {system_name}")
+    logging.info(f"Selected method: {args.method}")
+
+    logging.info(f"Loding the dataset from {args.pool_set} and {args.train_set}")
+    # Load pool set and train set
+    if isinstance(args.pool_set, list):
+        dataset = []
+        for traj in args.pool_set:
+            if Path(traj).stat().st_size > 0:
+                dataset += read(traj, index=':') 
+    data_dict = {
+        'pool': AseDataset(dataset, cutoff=models[0].cutoff),
+        #'train': AseDataset(args.train_set, cutoff=models[0].cutoff),
+        'train': AseDataset(read(args.train_set, index=':1000'), cutoff=models[0].cutoff),
+    }
+
+    logging.info(f"Train set size: {len(data_dict['train'])}")
+    logging.info(f"Pool set size: {len(data_dict['pool'])}")
 
     # raise error if the pool dataset is not large enough
     if args.method =='MD':
-        print(len(data_dict['pool']))
-        if len(data_dict['pool']) < args.batch_size * 1: #5
+        if len(data_dict['pool']) < args.batch_size*10 :
             raise RuntimeError(f"""The pool data set ({len(data_dict['pool'])}) is not large enough for selection!
             It should be larger than 10 times batch size ({args.batch_size*10}).
             Check your MD simulation!""")
@@ -167,9 +205,9 @@ def main():
         selection=args.selection, 
         n_random_features=args.n_random_features,
     )
-
+    logging.info(f"Selecting {args.batch_size} structures")
     # Manually choose N NEB images to be labeled.
-    if args.neb_init and args.method == 'NEB':
+    if args.method == 'NEB':
         indices_neb = np.arange(0,neb_img)
         if neb_img > args.batch_size:
             raise RuntimeError(f"""The pool data set is not large enough for selection! 
@@ -177,31 +215,28 @@ def main():
         if neb_img == args.batch_size:
             indices = indices_neb.tolist()
         else:
+            data_dict['pool'] = AseDataset(dataset[neb_img:], cutoff=models[0].cutoff)
             indices_al = al.select(models, data_dict, al_batch_size=args.batch_size-neb_img)
             indices = np.concatenate((indices_neb,np.array(indices_al)+neb_img),dtype=int).tolist()
+    
     # Choose N MD images to be labeled.
     elif args.method == 'MD':
         indices = al.select(models, data_dict, al_batch_size=args.batch_size)
     else:
         raise RuntimeError("Please give valid method for selection!")
-    al_idx = [datasplits['pool'][i] for i in indices] if args.dataset else indices
+    
+    al_idx = indices
     al_info = {
         'kernel': args.kernel,
         'selection': args.selection,
-        'dataset': args.dataset if args.dataset else args.pool_set,
+        'dataset': args.pool_set,
         'selected': al_idx,
     }
 
     with open('selected.json', 'w') as f:
         json.dump(al_info, f)
 
-    # Update new data splits
-    if args.dataset:
-        pool_idx = np.delete(datasplits['pool'], indices)    
-        datasplits['pool'] = pool_idx.tolist()
-        datasplits['train'] += al_idx
-        with open(args.split_file, 'w') as f:
-            json.dump(datasplits, f)
+    return True, {'system_name':system_name}
 
 if __name__ == "__main__":
     main()

@@ -37,20 +37,20 @@ load_prev_iter_model = true
 256_node_4_layer = {node_size = 256, num_interactions = 4}
 512_node_4_layer = {node_size = 512, num_interactions = 4}
 
-[Simulate.MD]
+[simulate.MD]
 time_step = 1
 temperature = 1000
 device = 'cpu'
 start_indice = -1
 max_steps = 100
 min_steps = 1000
-dump_step = 100
+dump_step = 1
 print_step = 1
 num_uncertain = 1000
 max_force_sd = 0.5
 force_sd_threshold = 0.2
 
-[Simulate.NEB]
+[simulate.NEB]
 opt_steps = 200
 opt_fmax = 0.05
 neb_fmax = 0.05
@@ -64,33 +64,34 @@ time_step_MD = 1
 print_step = 1
 device = 'cpu'
 
-[Simulate.runs.NaCoPO4]
+[simulate.runs.NaCoPO4]
 method = 'MD'
 init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaCoPO4.traj'
 
-[Simulate.runs.NaFePO4]
+[simulate.runs.NaFePO4]
 method = 'MD'
 init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4.traj'
 
-[Simulate.runs.NaMnPO4]
+[simulate.runs.NaMnPO4]
 method = 'MD'
 init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaMnPO4.traj'
 
-[Simulate.runs.NaNiPO4]
+[simulate.runs.NaNiPO4]
 method = 'MD'
 init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaNiPO4.traj'
 
-[Simulate.runs.NaFePO4_NEB]
+[simulate.runs.NaFePO4_NEB]
 method = 'NEB'
 initial_image = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4_init.traj'
 final_image = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4_final.traj'
 
 [select]
+train_set = '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' 
 kernel = "full-g"
 selection = "lcmd_greedy"
 n_random_features = 500
-batch_size = 50
-device = 'cuda'
+batch_size = 10
+device = 'cpu'
 
 [select.runs.NaCoPO4]
 method= 'MD' 
@@ -105,7 +106,7 @@ method= 'MD'
 method= 'MD' 
 
 [select.runs.NaFePO4_NEB]
-method= 'MD' 
+method= 'NEB' 
 
 [labeling] 
 train_set = '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' 
@@ -131,3 +132,54 @@ ldau_luj = {'Ni'= {'L'= 2, 'U'= 6.2, 'J'= 0}}
 nupdown = 64
 ldau_luj = {'Fe'= {'L'= 2, 'U'= 5.3, 'J'= 0}}
 
+[labeling.VASP]
+xc = 'PBE'
+encut = 520
+sigma = 0.05
+ediff = 1e-06
+ediffg = -0.02
+algo = 'all'
+prec = 'accurate'
+ibrion = 2
+isif = 3
+ismear = 0
+ispin = 2
+nelmin = 8
+nelm = 400
+lmaxmix = 4
+nsw = 1
+lorbit = 12
+ncore = 8
+lcharg = true
+lreal = 'auto'
+ldau = true
+gamma = true
+lwave = false
+istart = 0
+isym = 0
+symprec = 1e-7
+lasph=true
+time = 0.05
+command = 'mpirun vasp_std'
+setups = 'materialsproject'
+kpts = [ 3, 2, 3,]
+nupdown = 20
+ldau_luj = {'Fe'= {'L'= 2, 'U'= 5.3, 'J'= 0}}
+
+[labeling.GPAW]
+xc='PBE'
+mode= {name='pw',ecut=520}
+eigensolver= {name='dav',niter=1}
+occupations= {name='fermi-dirac',width=0.05,fixmagmom=true}
+#mode.name='pw'
+#mode.ecut=520
+#eigensolver.name='dav'
+#eigensolver.niter=1
+#occupations.name='fermi-dirac'
+#occupations.width=0.05
+#occupations.fixmagmom=true
+#convergence.energy=1e-05
+#convergence.density=1
+#convergence.eigenstates=1
+maxiter=200
+kpts = [3,2,2]

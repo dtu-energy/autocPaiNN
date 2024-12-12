@@ -553,17 +553,10 @@ def main(cfg, **kwargs):
     else:
         iter_idx, *_ = kwargs[ITER_KW]
         iter_idx += 1
-        
-        # Try to find model from previous iteration
-        if params['load_prev_iter_model']:
-            # Load the previous iteration MD trajectory 
-            MLP_path = os.path.join(run_dir,task_name, f'iter_{iter_idx-1}',args.output_dir)
-            if os.path.exists(MLP_path):
-                args.load_model = MLP_path
     
     # Get run path
-    run_dir = main_params['global']['run_path']
-    iter_dir = os.path.join(run_dir,task_name, f'iter_{iter_idx}')
+    run_path = main_params['global']['run_path']
+    iter_dir = os.path.join(run_path,task_name, f'iter_{iter_idx}')
 
     # Create the iteration directory
     try:
@@ -578,6 +571,14 @@ def main(cfg, **kwargs):
 
     # Create output directory if it does not exist
     os.makedirs(args.output_dir, exist_ok=True)
+
+    # Try to find model from previous iteration
+    if iter_idx > 0:
+        if params['load_prev_iter_model']:
+            # Load the previous iteration MD trajectory 
+            MLP_path = os.path.join(run_path,task_name, f'iter_{iter_idx-1}',args.output_dir)
+            if os.path.exists(MLP_path):
+                args.load_model = MLP_path
 
     # Setup logging
     logging.basicConfig(

@@ -4,21 +4,21 @@ import toml
 from workflow.md_run import MD
 from workflow.neb_run import NEB_run
 
-
 from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
 
 def main(cfg,run_list,**kwargs):
-    print(os.getcwd())
     # Load perqueue index
     idx, *_ =kwargs[INDEX_KW]
+    # Load iteration index
+    iter_idx,*_ = kwargs[ITER_KW]
     
     # Load all parameters from config file
     with open(cfg, 'r') as f:
         main_params = toml.load(f)
 
     # Load local parameters
-    task_name = 'Simulate'
-    params_simulate = main_params['Simulate']
+    task_name = 'simulate'
+    params_simulate = main_params[task_name]
 
     # Get system name 
     run_list = ast.literal_eval(run_list)
@@ -35,12 +35,9 @@ def main(cfg,run_list,**kwargs):
     params.update(system_params)
     
     # Make folder for the system
-    # Load iteration index
-    iter_idx,*_ = kwargs[ITER_KW]
-
     # Get run path
-    run_dir = main_params['global']['run_path']
-    system_dir = os.path.join(run_dir,task_name, f'iter_{iter_idx}',system_name)
+    run_path = main_params['global']['run_path']
+    system_dir = os.path.join(run_path,task_name, f'iter_{iter_idx}',system_name)
     # Create the iteration directory
     try:
         os.makedirs(system_dir)
@@ -49,7 +46,7 @@ def main(cfg,run_list,**kwargs):
 
     # Add random seed and model path to the trained MLPs
     params['random_seed'] = main_params['global']['random_seed']
-    params['model_path'] = os.path.join(run_dir,'train', f'iter_{iter_idx}')
+    params['model_path'] = os.path.join(run_path,'train', f'iter_{iter_idx}')
 
     # Move to the system directory and run the simulation
     os.chdir(system_dir)
@@ -59,7 +56,7 @@ def main(cfg,run_list,**kwargs):
         # If iteration >0 then load the previous iteration MD trajcetory 
         if iter_idx > 0:
             # Load the previous iteration MD trajectory 
-            MD_path = os.path.join(run_dir,task_name, f'iter_{iter_idx-1}',system_name,'MD.traj')
+            MD_path = os.path.join(run_path,task_name, f'iter_{iter_idx-1}',system_name,'MD.traj')
             params['init_traj'] = MD_path
 
         # Run the MD simulation
