@@ -8,3 +8,4 @@ toml==0.10.2
 myqueue==22.7.1
 itertools
 ast
+perqueue==0.2.2

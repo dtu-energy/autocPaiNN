@@ -1,24 +1,12 @@
-from cPaiNN.data import AseDataset, collate_atomsdata
-from cPaiNN.model import PainnModel
-from cPaiNN.relax import ML_Relaxer
-import torch
 import numpy as np
-from cPaiNN.active_learning import GeneralActiveLearning
 import os 
 import json
 import argparse, toml
 from pathlib import Path
 import logging
-from ase.io import read, write, Trajectory
+from ase.io import read
 
 from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
-
-def setup_seed(seed):
-     torch.manual_seed(seed)
-     if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-     np.random.seed(seed)
-     torch.backends.cudnn.deterministic = True
 
 def get_arguments(arg_list=None):
     parser = argparse.ArgumentParser(
@@ -98,6 +86,11 @@ def update_namespace(ns, d):
             ns.__dict__[k] = v
 
 def main(cfg,system_name,**kwargs):
+    from cPaiNN.active_learning import GeneralActiveLearning
+    from cPaiNN.data import AseDataset
+    from cPaiNN.relax import ML_Relaxer
+    from workflow.train_functions import setup_seed
+
     # Load iteration index
     iter_idx,*_ = kwargs[ITER_KW]
     

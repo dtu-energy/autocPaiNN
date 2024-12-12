@@ -1,14 +1,12 @@
 # auto-cPaiNN
 Auto-cPaiNN is a an active learning workflow for training the [cPaiNN](https://github.com/dtu-energy/cPaiNN) model on a specific phase space. It is based on [Curator](https://doi.org/10.26434/chemrxiv-2024-p5t3l) and initialized using [PerQueue](https://doi.org/10.1039/D4DD00134F). Please side all three papers when using this workflow.
 
-To provide an example workflow, data have been provided from the [the polyanaion sodium cathode dataset](https://doi.org/10.11583/DTU.27202446) and should be cited using doi: 0.11583/DTU.27202446. To get the training data for tge cPaiNN model, please download it at the [database](https://doi.org/10.11583/DTU.27202446).
+To provide an example workflow, data have been provided from the [the polyanaion sodium cathode dataset](https://doi.org/10.11583/DTU.27202446) and should be cited using doi: 0.11583/DTU.27202446. To get the training data for the cPaiNN model, please download it at the [database](https://doi.org/10.11583/DTU.27202446).
 
 To run cPaiNN please download the dependincies:
 ```bash
 pip install -r requirement.txt
 ```
-Please also use the PerQueue version in the repository. 
-
 
 The workflow diagram is vizualized below and comes from the [PerQueue paper](https://doi.org/10.1039/D4DD00134F) :
 ![plot](workflow.jpg)

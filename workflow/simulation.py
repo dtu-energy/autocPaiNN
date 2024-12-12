@@ -1,12 +1,12 @@
 import os 
 import ast
 import toml
-from workflow.md_run import MD
-from workflow.neb_run import NEB_run
 
 from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
 
 def main(cfg,run_list,**kwargs):
+    from workflow.md_run import MD
+    from workflow.neb_run import NEB_run
     # Load perqueue index
     idx, *_ =kwargs[INDEX_KW]
     # Load iteration index
