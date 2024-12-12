@@ -1,8 +1,0 @@
-2024-12-12 02:24:23,876 [INFO ]  Selected system: NaMnPO4
-2024-12-12 02:24:23,877 [INFO ]  Selected method: MD
-2024-12-12 02:24:23,877 [INFO ]  Loding the dataset from ['/home/energy/mahpe/Published_code/autocPaiNN/Example/simulate/iter_0/NaMnPO4/MD.traj', '/home/energy/mahpe/Published_code/autocPaiNN/Example/simulate/iter_0/NaMnPO4/warning_struct.traj'] and /home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz
-2024-12-12 02:24:24,361 [INFO ]  Train set size: 1000
-2024-12-12 02:24:24,361 [INFO ]  Pool set size: 101
-2024-12-12 02:24:24,361 [INFO ]  Selecting 10 structures
-/home/energy/mahpe/anaconda3/envs/env_sylg/lib/python3.11/site-packages/torch/nn/modules/module.py:1359: UserWarning: Using a non-full backward hook when the forward contains multiple autograd Nodes is deprecated and will be removed in future versions. This hook will be missing some grad_input. Please use register_full_backward_hook to get the documented behavior.
-  warnings.warn("Using a non-full backward hook when the forward contains multiple autograd Nodes "

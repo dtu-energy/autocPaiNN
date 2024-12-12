@@ -592,7 +592,7 @@ def main(cfg, **kwargs):
             # Load the previous iteration MD trajectory 
             MLP_path = os.path.join(run_path,task_name, f'iter_{iter_idx-1}',args.output_dir)
             if os.path.exists(MLP_path):
-                args.load_model = MLP_path
+                args.load_model = os.path.join(MLP_path, "best_model.pth")
 
     # Setup logging
     logging.basicConfig(

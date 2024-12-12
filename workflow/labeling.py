@@ -129,6 +129,9 @@ def main(cfg,system_name,**kwargs):
         os.putenv('VASP_PP_PATH', '/home/energy/modules/software/VASP/vasp-potpaw-5.4')
         os.putenv('ASE_VASP_COMMAND', 'mpirun vasp_std')
 
+        # Update the parameters
+        vasp_params.update(system_params)
+
         calc = Vasp(**vasp_params)
         unconverged_idx = []
         for i, atoms in enumerate(images):
@@ -161,6 +164,7 @@ def main(cfg,system_name,**kwargs):
 
     elif params['method'] =='GPAW':
         from gpaw import GPAW, KohnShamConvergenceError
+        gpaw_params.update(system_params)
         calc = GPAW(**gpaw_params)
         calc.set(txt='GPAW.txt')
         unconverged_idx = []
@@ -200,8 +204,8 @@ def main(cfg,system_name,**kwargs):
     with open(cfg, 'r') as f:
         main_params = toml.load(f)
     params_train = main_params['train']
-    if 'ensemble' in params:
-        dmkey = len(list(params['ensemble'].keys()))
+    if 'ensemble' in params_train:
+        dmkey = len(list(params_train['ensemble'].keys()))
     else:
         dmkey = 1
 

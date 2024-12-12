@@ -1,1 +1,0 @@
-{"kernel": "full-g", "selection": "lcmd_greedy", "dataset": ["/home/energy/mahpe/Published_code/autocPaiNN/Example/simulate/iter_0/NaNiPO4/MD.traj", "/home/energy/mahpe/Published_code/autocPaiNN/Example/simulate/iter_0/NaNiPO4/warning_struct.traj"], "selected": [45, 0, 28, 85, 35, 24, 7, 91, 60, 82]}

@@ -1,8 +1,0 @@
-Perqueue key:   1
-Code:           /home/energy/mahpe/Published_code/autocPaiNN/workflow/train.py
-User Arguments: {'cfg': 'config.toml'}
-PQ Arguments:   {'pq_index': [2]}
-------------------------------------------------------------------------------
-
-env_sylg
-{'pq_dwg_width': 5, 'run_list': "['NaCoPO4', 'NaFePO4', 'NaMnPO4', 'NaNiPO4', 'NaFePO4_NEB']"}

@@ -1,6 +1,0 @@
-2024-12-11 21:19:59,721 [INFO ]  Computing magnetic moments and bader charges
-2024-12-11 21:19:59,722 [INFO ]  Using device: cpu
-2024-12-11 21:19:59,722 [INFO ]  loading data /home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz
-2024-12-11 21:20:47,338 [INFO ]  Dataset size: 113532, training set size: 102178, validation set size: 11354
-2024-12-11 21:20:47,338 [INFO ]  Computing mean and variance
-2024-12-11 21:22:10,697 [DEBUG]  target_mean=-6.516045, target_stddev=0.441116
