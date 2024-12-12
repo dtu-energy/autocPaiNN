@@ -1,4 +1,3 @@
-from ase.calculators.vasp import Vasp
 from ase.io import read, write, Trajectory
 from ase.db import connect
 from shutil import copy
@@ -9,7 +8,6 @@ import json
 import toml
 from pathlib import Path
 from ase.calculators.calculator import CalculationFailed
-#from gpaw import GPAW, KohnShamConvergenceError
 
 from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
 
@@ -37,11 +35,6 @@ def get_arguments(arg_list=None):
         "--al_info", 
         type=str, 
         help="Path to json file that stores indices selected in pool set",
-    )
-    parser.add_argument(
-        "--job_order",
-        type=int,
-        help="Split DFT jobs to several different parts",
     )
     parser.add_argument(
         "--cfg",
@@ -81,8 +74,10 @@ def main(cfg,system_name,**kwargs):
 
     # Get the pool set and the selected indices
     with open(params['al_info']) as f:
-        params['pool_set'] = json.load(f)['dataset']  
-        al_indices = json.load(f)["selected"]  
+        al_data = json.load(f)
+    
+    params['pool_set'] = al_data['dataset']  
+    al_indices = al_data["selected"]  
     
     # Get namepsace and update it with the parameters
     args = get_arguments()
@@ -128,17 +123,12 @@ def main(cfg,system_name,**kwargs):
     check_result = False
 
     if params['method'] =='VASP':
+        from ase.calculators.vasp import Vasp
         # set environment variables
         os.putenv('ASE_VASP_VDW', '/home/energy/modules/software/VASP/vasp-potpaw-5.4')
         os.putenv('VASP_PP_PATH', '/home/energy/modules/software/VASP/vasp-potpaw-5.4')
         os.putenv('ASE_VASP_COMMAND', 'mpirun vasp_std')
 
-        # create scratch3 directory
-        current_dir = os.getcwd()
-        scratch3_dir = current_dir.replace('energy', 'scratch3')
-        if not os.path.exists(scratch3_dir):
-            os.makedirs(scratch3_dir)
-        
         calc = Vasp(**vasp_params)
         unconverged_idx = []
         for i, atoms in enumerate(images):
@@ -152,7 +142,7 @@ def main(cfg,system_name,**kwargs):
                 db.write(atoms,al_ind=al_ind,converged=False)
                 unconverged_idx.append(i)
                 copy('OSZICAR', f'OSZICAR_{i}_{al_ind}')
-                copy('CHGCAR', scratch3_dir+f'/CHGCAR_{i}_{al_ind}')
+                copy('CHGCAR', f'CHGCAR_{i}_{al_ind}')
                 os.remove('CHGCAR')
                 continue
 
@@ -164,13 +154,13 @@ def main(cfg,system_name,**kwargs):
                 db.write(atoms,al_ind=al_ind,converged=False)
                 unconverged_idx.append(i)
             copy('OSZICAR', f'OSZICAR_{i}_{al_ind}')
-            copy('CHGCAR', scratch3_dir+f'/CHGCAR_{i}_{al_ind}')
+            copy('CHGCAR', 'CHGCAR_{i}_{al_ind}')
 
             os.remove('WAVECAR')
             os.remove('CHGCAR')
 
     elif params['method'] =='GPAW':
-
+        from gpaw import GPAW, KohnShamConvergenceError
         calc = GPAW(**gpaw_params)
         calc.set(txt='GPAW.txt')
         unconverged_idx = []
@@ -204,6 +194,17 @@ def main(cfg,system_name,**kwargs):
             atom.info['system'] = args.system
             atom.info['path'] = str(Path('dft_structures.db').resolve())
             train_traj.write(atom)
+    
+    # Find how many models to train and return to the run directory
+    # Load them to the main parameters again to give the opertunity to change the number of MLP doing the labeling step
+    with open(cfg, 'r') as f:
+        main_params = toml.load(f)
+    params_train = main_params['train']
+    if 'ensemble' in params:
+        dmkey = len(list(params['ensemble'].keys()))
+    else:
+        dmkey = 1
 
+    return True, {DYNAMICWIDTHGROUP_KEY: dmkey}
 if __name__ == "__main__":
     main()

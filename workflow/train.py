@@ -156,6 +156,18 @@ def get_arguments(arg_list=None):
         help="Compute bader charges",
         default=False,
     )
+    parser.add_argument(
+        "--stop_after_train",
+        type=bool,
+        help="Stop the workflow after training",
+        default=False,
+    )
+    parser.add_argument(
+        "--load_prev_iter_model",
+        type=bool,
+        help="Load model from previous iteration",
+        default=True,
+    )
     return parser.parse_args(arg_list)
 
 
@@ -547,12 +559,14 @@ def main(cfg, **kwargs):
     args = get_arguments()
     update_namespace(args, params)
 
-    # Creating the iteration folder
+    # Creating the iteration folder and create the return parameters for the next iteration (will be updated later with the number of simualtion runs)
     if ITER_KW not in kwargs:
         iter_idx = 0
+        return_parameters = {}
     else:
         iter_idx, *_ = kwargs[ITER_KW]
         iter_idx += 1
+        return_parameters = {CYCLICALGROUP_KEY: args.stop_after_train,}
     
     # Get run path
     run_path = main_params['global']['run_path']
@@ -574,7 +588,7 @@ def main(cfg, **kwargs):
 
     # Try to find model from previous iteration
     if iter_idx > 0:
-        if params['load_prev_iter_model']:
+        if args.load_prev_iter_model:
             # Load the previous iteration MD trajectory 
             MLP_path = os.path.join(run_path,task_name, f'iter_{iter_idx-1}',args.output_dir)
             if os.path.exists(MLP_path):
@@ -837,7 +851,8 @@ def main(cfg, **kwargs):
                     # Find simulation keys
                     run_list = list(main_params['Simulate']['runs'].keys())
                     dmkey = len(run_list)
-                    return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey,'run_list':str(run_list)}
+                    return_parameters[DYNAMICWIDTHGROUP_KEY] = dmkey
+                    return_parameters['run_list'] = str(run_list)
                     return True , return_parameters
 
             step += 1
@@ -869,7 +884,8 @@ def main(cfg, **kwargs):
                 # Find simulation keys
                 run_list = list(main_params['Simulate']['runs'].keys())
                 dmkey = len(run_list)
-                return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey,'run_list':str(run_list)}
+                return_parameters[DYNAMICWIDTHGROUP_KEY] = dmkey
+                return_parameters['run_list'] = str(run_list)
                 return True , return_parameters
 
 if __name__ == "__main__":

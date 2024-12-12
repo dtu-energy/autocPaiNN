@@ -185,8 +185,8 @@ def main(cfg,system_name,**kwargs):
                 dataset += read(traj, index=':') 
     data_dict = {
         'pool': AseDataset(dataset, cutoff=models[0].cutoff),
-        #'train': AseDataset(args.train_set, cutoff=models[0].cutoff),
-        'train': AseDataset(read(args.train_set, index=':1000'), cutoff=models[0].cutoff),
+        'train': AseDataset(args.train_set, cutoff=models[0].cutoff),
+        #'train': AseDataset(read(args.train_set, index=':1000'), cutoff=models[0].cutoff),
     }
 
     logging.info(f"Train set size: {len(data_dict['train'])}")
