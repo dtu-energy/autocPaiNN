@@ -5,6 +5,7 @@ import argparse, toml
 from pathlib import Path
 import logging
 from ase.io import read
+import torch
 
 from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
 
@@ -69,11 +70,6 @@ def get_arguments(arg_list=None):
         "--train_set", type=str, help="Path to training set. Useful for pool/train based selection method",
     )
     parser.add_argument(
-        "--device",
-        type=str,
-        help="Set which device to use for training e.g. 'cuda' or 'cpu'",
-    )
-    parser.add_argument(
         "--random_seed",
         type=int,
         help="Random seed for this run",
@@ -90,6 +86,14 @@ def main(cfg,system_name,**kwargs):
     from cPaiNN.data import AseDataset
     from cPaiNN.relax import ML_Relaxer
     from workflow.train_functions import setup_seed
+
+    # Create device
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    logging.info(f"Using device: {device}")
+
+    # Put a tensor on the device before loading data
+    # This way the GPU appears to be in use when other users run gpustat
+    torch.tensor([0], device=device)
 
     # Load iteration index
     iter_idx,*_ = kwargs[ITER_KW]
@@ -144,7 +148,7 @@ def main(cfg,system_name,**kwargs):
         json.dump(vars(args), f)
 
     # Load models
-    ML_class = ML_Relaxer(calc_name=args.model_name,calc_paths=args.model_path,device=args.device)
+    ML_class = ML_Relaxer(calc_name=args.model_name,calc_paths=args.model_path,device=device)
     if not ML_class.ensemble:
         raise NotImplementedError("Only ensemble training is supported at the moment")
     models = ML_class.models

@@ -124,12 +124,6 @@ def get_arguments(arg_list=None):
         type=int,
         help="Random seed for this run",
     )
-    parser.add_argument(
-        "--device",
-        type=str,
-        default='cuda',
-        help="Set which device to use for running MD e.g. 'cuda' or 'cpu'",
-    )
 
     return parser.parse_args(arg_list)
 
@@ -151,6 +145,14 @@ class CallsCounter:
         self.func(*args, **kwargs)
 
 def NEB_run(params):
+    # Create device
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    logging.info(f"Using device: {device}")
+
+    # Put a tensor on the device before loading data
+    # This way the GPU appears to be in use when other users run gpustat
+    torch.tensor([0], device=device)
+    
     # Get arguments
     args = get_arguments()
 
@@ -182,7 +184,7 @@ def NEB_run(params):
     
     # Load MLP model
     # Set up the MLP calculator
-    ML_class = ML_Relaxer(calc_name=args.model_name,calc_paths=args.model_path,device=args.device,relax_cell=False)
+    ML_class = ML_Relaxer(calc_name=args.model_name,calc_paths=args.model_path,device=device,relax_cell=False)
     if not ML_class.ensemble:
         raise NotImplementedError("Only ensemble training is supported at the moment")
     

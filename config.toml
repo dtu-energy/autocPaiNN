@@ -5,32 +5,33 @@ max_iteration = 10 #Maximum number of itertaion to run the workflow. The worklow
 
 ### 1) Train step ###
 [train] #Main parameters
-cutoff = 4.0 
-val_ratio = 0.1
-node_size = 64 
-num_interactions = 4
-output_dir = 'model_output' #The folder name for which the MLP will be saved at every itertaion except if you train ensembles
-dataset = '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' #CHANGE to correct path. Training set datapath. It will be steadily increasing
-max_steps = 1500000 #Maxium number of epochs
-batch_size = 20 #Number of strutcures in each batch
-initial_lr = 0.0001
-forces_weight = 0.98 #The energy wieght is 1-force_weight
-charge_weight = 0.1 #Bader charge and magmom wieght
-stress_weight = 1000
-log_interval = 2000 #The number of which validation will be performed
+cutoff = 4.0     # Cutoff radius in Å for message interactions between atoms
+val_ratio = 0.1     # Ratio of the traning set used for validation
+node_size = 64     # The size of the hidden layers in the message pasing neural network
+num_interactions = 4     # The number of message updates in the message parsing neural network
+output_dir = 'Polyanion_bader_magmom_stress_64_4'     # The output directory, where the model files are safed
+dataset = 'Combined.xyz'     # The path to the training data. Must be in .xyz file, if bader charges should be trained
+max_steps = 1500000     # Maximum number of epochs
+batch_size = 20     # The batch size per epoch
+initial_lr = 0.0001     # The initial learning rate (will be updated based on the training loss during the training)
+forces_weight = 0.98     # The weight of the force loss
+charge_weight = 0.1     # The weight of the charge loss. The same loss weight is used for magnetic moment and bader charges
+stress_weight = 1000     # The weight of the stress loss. Is high on purpose because no scaling of the stress is included in the traning script
+log_interval = 2000     # The epoch interval for saving the 
 
-plateau_scheduler = true #Change the learning rate according to the change in training loss
-normalization = true #Normalize the energy 
-atomwise_normalization = true #Normalize it per atom or per sample
-stop_patience = 1000 #When to stop the training when the same loss have been seen repeatedly 
+plateau_scheduler = true     # Using PyTorch ReduceLROnPlateau (true) or LambdaLR (false) to vary the learning rate based on the training loss 
+normalization = true      # Normalize the total energy based on the whole dataset (true) or not (false)
+atomwise_normalization = true      # Using atomwise normalization (true) or datawise normalization (false). The normalization parameter need to be true to use this parameter
+stop_patience = 1000     # Number of epochs without any training loss improvements before the traning terminates
 
-compute_forces = true #Train with forces
-compute_stress = true #Train with stess
-compute_magmom=true #Train with magnetic moments
-compute_bader_charge=false #Train with Bader charge. Check if your data follows the bader attachment in "bader_attach.py"
+random_seed = 0     # The random seed used by PyTorch
+compute_forces = true     # Train with forces
+compute_stress = true     # Train with stress
+compute_magmom=true     # Train with magnetic moments
+compute_bader_charge=true     # Train with bader charges (need to include a describtor. See bader_charge.ipynb)
 
-stop_after_train = false #IMPORTANT. This parameters lets you stop the workflow after it has performed a last MLP training
-load_prev_iter_model = true #Load previose models from earlier itertaions
+stop_after_train = false     #IMPORTANT. This parameters lets you stop the workflow after it has performed a last MLP training
+load_prev_iter_model = true     #Load previose models from earlier itertaions
 
 [train.ensemble] #Ensemble parameters. Each dictionary represent another model with new parameters. You need at least to train two different model in the current verion of auto-cPaiNN
 128_node_4_layer = {node_size = 128, num_interactions = 4}
@@ -38,32 +39,32 @@ load_prev_iter_model = true #Load previose models from earlier itertaions
 512_node_4_layer = {node_size = 512, num_interactions = 4}
 
 ### 2) Simulate step ###
-[simulate.MD] #Main molecular dynamics(MD) paramaters. Can be updated by each system
-time_step = 1 
-temperature = 1000
-device = 'cpu'
-start_indice = -1 #Uses the larst image in your trajectory as a starting point for the MLP MD
-max_steps = 1000 #Maximum steps the MLP MD can take
-min_steps = 1000 #Minimum steps the MLP MD can take
-dump_step = 1 #How often you save trajectory points
-print_step = 1 #How often you print predicted properties
-num_uncertain = 1000 #Total number of trajectory points with a force uncertainty outside of the threshold before the MD is terminated
-max_force_sd = 0.5 #Maxmimum force standard deviation(std). If the MLP MD gets higher force std the simualtion will stop
-force_sd_threshold = 0.2 #Force std threshold for uncertain trajectory points
+# Main molecular dynamics(MD) paramaters. Can be updated by each system #
+[simulate.MD] 
+time_step = 1     # MD timestep in fs
+temperature = 1000      # The temperature of the MD simulation
+start_indice = -1     # Uses the larst image in your trajectory as a starting point for the MLP MD
+max_steps = 1000     # Maximum steps the MLP MD simulation can take
+min_steps = 1000     # Minimum steps the MLP MD simulation can take
+dump_step = 1     # The interval for saving trajectory points
+print_step = 1     # The interval for saving MD simulation information
+num_uncertain = 1000     #Total number of trajectory points with a force uncertainty outside of the threshold before the MD is terminated
+max_force_sd = 0.5     #Maxmimum force standard deviation(std). If the MLP MD gets higher force std the simualtion will stop
+force_sd_threshold = 0.2     #Force std threshold for uncertain trajectory points
 
-[simulate.NEB] #Main nugded elastic band(NEB) paramaters. Can be updated by each system
-opt_steps = 200 #Maxmimum optimization steps of the initial/final image
-opt_fmax = 0.05 #Minimum force for the structure optimization
-neb_steps = 1000 #Maxmimum optimization steps of NEB
-neb_fmax = 0.05 #Minimum force for the NEB optimization
-num_img = 5 #The number of intermidate images in the NEB
-climb = false #Using climbing image or not
-friction_MD = 0.003 #Friction constant of the little MD performed for the NEB images to get out-of-distribution samples
-temperature_MD = 1500 
-time_MD = 1
-time_step_MD = 1
-print_step = 1
-device = 'cpu'
+# Main nugded elastic band(NEB) paramaters. Can be updated by each system #
+[simulate.NEB] 
+opt_steps = 200     #Maxmimum optimization steps of the initial/final image
+opt_fmax = 0.05     #Minimum force for the structure optimization
+neb_steps = 1000     #Maxmimum optimization steps of NEB
+neb_fmax = 0.05     #Minimum force for the NEB optimization
+num_img = 5     #The number of intermidate images in the NEB
+climb = false     #Using climbing image or not
+friction_MD = 0.003     #Friction constant of the little MD performed for the NEB images to get out-of-distribution samples
+temperature_MD = 1500     # Temperture of the MD simualtion used to deform the NEB images
+time_MD = 10      # The total time of the MD simualtion
+time_step_MD = 1     # The time step of the MD simualtion
+print_step = 1     # The interval for saving MD simulation information
 
 # Here we list the 5 systems used in this workflow (NaCoPO4,NaMnPO4,NaNiPO4,NaFePO4 and NaFePO4_NEB)
 [simulate.runs.NaCoPO4]
@@ -90,12 +91,12 @@ final_image = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4
 ### 3) Select step ###
 [select]
 train_set = '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' ##CHANGE to correct path. System path
-kernel = "full-g" #Kernel for which the features are mapped into
-selection = "lcmd_greedy" #The selection method
-n_random_features = 500 #Number of random features
+kernel = "full-g"     #Kernel for which the features are mapped into
+selection = "lcmd_greedy"     #The selection method
+n_random_features = 500     #Number of random features
 batch_size = 10 #IMPORTANT. Number of structure you want to label in the next step
-device = 'cpu'
 
+# Different system, with predefined methods
 [select.runs.NaCoPO4]
 method= 'MD' 
 
@@ -114,8 +115,9 @@ method= 'NEB'
 ### 4) Labeling step ###
 [labeling] 
 train_set = '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' #CHANGE to correct path. Training set datapath.
-method='VASP'
+method='VASP' # The method used to perform single point DFT calculations
 
+# Specfic parameters for each system. Note you need a dummy parameter in the main VASP parameters so these parameters can replace it
 [labeling.runs.NaCoPO4]
 nupdown = 48
 ldau_luj = {'Co'= {'L'= 2, 'U'= 3.32, 'J'= 0}}
@@ -136,6 +138,7 @@ ldau_luj = {'Ni'= {'L'= 2, 'U'= 6.2, 'J'= 0}}
 nupdown = 64
 ldau_luj = {'Fe'= {'L'= 2, 'U'= 5.3, 'J'= 0}}
 
+# VASP parameters #
 [labeling.VASP]
 xc = 'PBE'
 encut = 520
@@ -170,6 +173,7 @@ kpts = [ 3, 2, 3,]
 nupdown = 20 #This is an example of a dummy parameter which will change in the label step depending on the system
 ldau_luj = {'Fe'= {'L'= 2, 'U'= 5.3, 'J'= 0}} #This is an example of a dummy parameter which will change in the label step depending on the system
 
+# GPAW parameters #
 [labeling.GPAW]
 xc='PBE'
 mode= {name='pw',ecut=520}
