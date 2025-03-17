@@ -1,7 +1,7 @@
 [global] #Global paramters
-run_path = '/home/energy/mahpe/Published_code/autocPaiNN/Example' #Where you want to run the code. The Directoru will be created in "pq_submit.py"
-random_seed = 3407 #A random seed used for the ML model. This is used for the whole workflow.
-max_iteration = 10 #Maximum number of itertaion to run the workflow. The worklow can be stopped earlier
+run_path = '/home/energy/mahpe/Published_code/autocPaiNN/Example'     #Where you want to run the code. The Directoru will be created in "pq_submit.py"
+random_seed = 3407     #A random seed used for the ML model. This is used for the whole workflow.
+max_iteration = 10     #Maximum number of itertaion to run the workflow. The worklow can be stopped earlier
 
 ### 1) Train step ###
 [train] #Main parameters
@@ -10,21 +10,20 @@ val_ratio = 0.1     # Ratio of the traning set used for validation
 node_size = 64     # The size of the hidden layers in the message pasing neural network
 num_interactions = 4     # The number of message updates in the message parsing neural network
 output_dir = 'Polyanion_bader_magmom_stress_64_4'     # The output directory, where the model files are safed
-dataset = 'Combined.xyz'     # The path to the training data. Must be in .xyz file, if bader charges should be trained
-max_steps = 1500000     # Maximum number of epochs
+dataset = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4_train.xyz'     # The path to the training data. Must be in .xyz file, if bader charges should be trained
+max_steps = 5     # Maximum number of epochs
 batch_size = 20     # The batch size per epoch
 initial_lr = 0.0001     # The initial learning rate (will be updated based on the training loss during the training)
 forces_weight = 0.98     # The weight of the force loss
 charge_weight = 0.1     # The weight of the charge loss. The same loss weight is used for magnetic moment and bader charges
 stress_weight = 1000     # The weight of the stress loss. Is high on purpose because no scaling of the stress is included in the traning script
-log_interval = 2000     # The epoch interval for saving the 
+log_interval = 1    # The epoch interval for saving the 
 
 plateau_scheduler = true     # Using PyTorch ReduceLROnPlateau (true) or LambdaLR (false) to vary the learning rate based on the training loss 
 normalization = true      # Normalize the total energy based on the whole dataset (true) or not (false)
 atomwise_normalization = true      # Using atomwise normalization (true) or datawise normalization (false). The normalization parameter need to be true to use this parameter
 stop_patience = 1000     # Number of epochs without any training loss improvements before the traning terminates
 
-random_seed = 0     # The random seed used by PyTorch
 compute_forces = true     # Train with forces
 compute_stress = true     # Train with stress
 compute_magmom=true     # Train with magnetic moments
@@ -34,21 +33,21 @@ stop_after_train = false     #IMPORTANT. This parameters lets you stop the workf
 load_prev_iter_model = true     #Load previose models from earlier itertaions
 
 [train.ensemble] #Ensemble parameters. Each dictionary represent another model with new parameters. You need at least to train two different model in the current verion of auto-cPaiNN
-128_node_4_layer = {node_size = 128, num_interactions = 4}
-256_node_4_layer = {node_size = 256, num_interactions = 4}
-512_node_4_layer = {node_size = 512, num_interactions = 4}
+64_node_3_layer = {node_size = 64, num_interactions = 3}
+64_node_4_layer = {node_size = 64, num_interactions = 4}
+128_node_3_layer = {node_size = 128, num_interactions = 3}
 
 ### 2) Simulate step ###
 # Main molecular dynamics(MD) paramaters. Can be updated by each system #
 [simulate.MD] 
 time_step = 1     # MD timestep in fs
-temperature = 1000      # The temperature of the MD simulation
+temperature = 300      # The temperature of the MD simulation
 start_indice = -1     # Uses the larst image in your trajectory as a starting point for the MLP MD
-max_steps = 1000     # Maximum steps the MLP MD simulation can take
-min_steps = 1000     # Minimum steps the MLP MD simulation can take
+max_steps = 100     # Maximum steps the MLP MD simulation can take
+min_steps = 100     # Minimum steps the MLP MD simulation can take
 dump_step = 1     # The interval for saving trajectory points
 print_step = 1     # The interval for saving MD simulation information
-num_uncertain = 1000     #Total number of trajectory points with a force uncertainty outside of the threshold before the MD is terminated
+num_uncertain = 100     #Total number of trajectory points with a force uncertainty outside of the threshold before the MD is terminated
 max_force_sd = 0.5     #Maxmimum force standard deviation(std). If the MLP MD gets higher force std the simualtion will stop
 force_sd_threshold = 0.2     #Force std threshold for uncertain trajectory points
 
@@ -61,27 +60,22 @@ neb_fmax = 0.05     #Minimum force for the NEB optimization
 num_img = 5     #The number of intermidate images in the NEB
 climb = false     #Using climbing image or not
 friction_MD = 0.003     #Friction constant of the little MD performed for the NEB images to get out-of-distribution samples
-temperature_MD = 1500     # Temperture of the MD simualtion used to deform the NEB images
+temperature_MD = 1000     # Temperture of the MD simualtion used to deform the NEB images
 time_MD = 10      # The total time of the MD simualtion
 time_step_MD = 1     # The time step of the MD simualtion
 print_step = 1     # The interval for saving MD simulation information
 
 # Here we list the 5 systems used in this workflow (NaCoPO4,NaMnPO4,NaNiPO4,NaFePO4 and NaFePO4_NEB)
-[simulate.runs.NaCoPO4]
+[simulate.runs.NaFePO4_300K]
 method = 'MD'
-init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaCoPO4.traj' #CHANGE to correct path. System path
-
-[simulate.runs.NaFePO4]
-method = 'MD'
+temperature_MD = 300
 init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4.traj' #CHANGE to correct path. System path
 
-[simulate.runs.NaMnPO4]
+[simulate.runs.NaFePO4_1000K]
 method = 'MD'
-init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaMnPO4.traj' #CHANGE to correct path. System path
+temperature_MD = 1000
+init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4.traj' #CHANGE to correct path. System path
 
-[simulate.runs.NaNiPO4]
-method = 'MD'
-init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaNiPO4.traj' #CHANGE to correct path. System path
 
 [simulate.runs.NaFePO4_NEB]
 method = 'NEB'
@@ -90,23 +84,17 @@ final_image = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4
 
 ### 3) Select step ###
 [select]
-train_set = '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' ##CHANGE to correct path. System path
+train_set = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4_train.xyz' ##CHANGE to correct path. System path
 kernel = "full-g"     #Kernel for which the features are mapped into
 selection = "lcmd_greedy"     #The selection method
 n_random_features = 500     #Number of random features
 batch_size = 10 #IMPORTANT. Number of structure you want to label in the next step
 
 # Different system, with predefined methods
-[select.runs.NaCoPO4]
+[select.runs.NaFePO4_300K]
 method= 'MD' 
 
-[select.runs.NaFePO4]
-method= 'MD' 
-
-[select.runs.NaMnPO4]
-method= 'MD' 
-
-[select.runs.NaNiPO4]
+[select.runs.NaFePO4_1000K]
 method= 'MD' 
 
 [select.runs.NaFePO4_NEB]
@@ -114,25 +102,17 @@ method= 'NEB'
 
 ### 4) Labeling step ###
 [labeling] 
-train_set = '/home/energy/mahpe/Published_code/polyanion_cathode_dataset/Combined.xyz' #CHANGE to correct path. Training set datapath.
+train_set = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4_train.xyz' #CHANGE to correct path. Training set datapath.
 method='VASP' # The method used to perform single point DFT calculations
 
 # Specfic parameters for each system. Note you need a dummy parameter in the main VASP parameters so these parameters can replace it
-[labeling.runs.NaCoPO4]
-nupdown = 48
-ldau_luj = {'Co'= {'L'= 2, 'U'= 3.32, 'J'= 0}}
-
-[labeling.runs.NaFePO4]
+[labeling.runs.NaFePO4_300K]
 nupdown = 64
 ldau_luj = {'Fe'= {'L'= 2, 'U'= 5.3, 'J'= 0}}
 
-[labeling.runs.NaMnPO4]
-nupdown = 80
-ldau_luj = {'Mn'= {'L'= 2, 'U'= 3.9, 'J'= 0}}
-
-[labeling.runs.NaNiPO4]
-nupdown = 32
-ldau_luj = {'Ni'= {'L'= 2, 'U'= 6.2, 'J'= 0}}
+[labeling.runs.NaFePO4_1000K]
+nupdown = 64
+ldau_luj = {'Fe'= {'L'= 2, 'U'= 5.3, 'J'= 0}}
 
 [labeling.runs.NaFePO4_NEB]
 nupdown = 64

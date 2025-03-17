@@ -13,14 +13,7 @@ import sys
 import argparse
 import logging
 from cPaiNN.relax import ML_Relaxer
-
-
-def setup_seed(seed):
-     torch.manual_seed(seed)
-     if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-     np.random.seed(seed)
-     torch.backends.cudnn.deterministic = True
+from cPaiNN.utils import setup_seed
 
 def get_arguments(arg_list=None):
     parser = argparse.ArgumentParser(
@@ -132,9 +125,19 @@ def load_images(img_IS, img_FS):
     final = read(img_FS)
     return initial, final
 
-def update_namespace(ns, d):
+def update_namespace(ns:argparse.Namespace, d:dict) -> None:
+    """
+
+    Update the namespace with the dictionary.
+
+    Args:
+        ns: The namespace to update
+        d: The dictionary to update the namespace with
+    
+    """
     for k, v in d.items():
-        ns.__dict__[k] = v
+        if not ns.__dict__.get(k):
+            ns.__dict__[k] = v
 
 class CallsCounter:
     def __init__(self, func):
@@ -144,10 +147,10 @@ class CallsCounter:
         self.calls += 1
         self.func(*args, **kwargs)
 
-def NEB_run(params):
+def NEB_run(params:dict,run_dir:str='.') -> None: 
     # Create device
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    logging.info(f"Using device: {device}")
+    
 
     # Put a tensor on the device before loading data
     # This way the GPU appears to be in use when other users run gpustat
@@ -160,7 +163,7 @@ def NEB_run(params):
     update_namespace(args, params)
 
     # Save parsed arguments
-    with open(os.path.join( "arguments.json"), "w") as f:
+    with open(os.path.join(run_dir, "arguments.json"), "w") as f:
         json.dump(vars(args), f)
 
     setup_seed(args.random_seed)
@@ -169,10 +172,10 @@ def NEB_run(params):
     logger = logging.getLogger(__file__)
     logger.setLevel(logging.DEBUG)
 
-    runHandler = logging.FileHandler('neb.log', mode='w')
+    runHandler = logging.FileHandler(os.path.join(run_dir,'neb.log'), mode='w')
     runHandler.setLevel(logging.DEBUG)
     runHandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)7s - %(message)s"))
-    errorHandler = logging.FileHandler('neb_error.log', mode='w')
+    errorHandler = logging.FileHandler(os.path.join(run_dir,'neb_error.log'), mode='w')
     errorHandler.setLevel(logging.WARNING)
     errorHandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)7s - %(message)s"))
 
@@ -181,10 +184,11 @@ def NEB_run(params):
     logger.addHandler(logging.StreamHandler())
     logger.warning = CallsCounter(logger.warning)
     logger.info = CallsCounter(logger.info)
-    
+    logging.info(f"Using device: {device}")
     # Load MLP model
     # Set up the MLP calculator
     ML_class = ML_Relaxer(calc_name=args.model_name,calc_paths=args.model_path,device=device,relax_cell=False)
+    ml_calc = ML_class.calculator
     if not ML_class.ensemble:
         raise NotImplementedError("Only ensemble training is supported at the moment")
     
@@ -197,18 +201,18 @@ def NEB_run(params):
     # Perform geometry optimization for initial and final images
     logger.info('Optimizing images with the MLP')
     initial_results=ML_class.relax(initial_dft, fmax=args.opt_fmax, steps=args.opt_steps,
-                                    traj_file=f'initial.traj', 
-                                    log_file=f'initial.log', interval=1)
+                                    traj_file=os.path.join(run_dir,f'initial.traj'), 
+                                    log_file=os.path.join(run_dir,f'initial.log'), interval=1)
     initial_ml = initial_results['final_structure']
     
     final_results=ML_class.relax(final_dft, fmax=args.opt_fmax, steps=args.opt_steps,
-                                    traj_file=f'final.traj', 
-                                    log_file=f'final.log', interval=1)
+                                    traj_file=os.path.join(run_dir,f'final.traj'), 
+                                    log_file=os.path.join(run_dir,f'final.log'), interval=1)
     final_ml = final_results['final_structure']
 
     # Check if the systems converged:
-    fmax_init = pd.read_csv('initial.log',delimiter="\s+")['fmax'].values.astype(float)[-1]
-    fmax_final = pd.read_csv('final.log',delimiter="\s+")['fmax'].values.astype(float)[-1]
+    fmax_init = pd.read_csv(os.path.join(run_dir,'initial.log'),delimiter="\s+")['fmax'].values.astype(float)[-1]
+    fmax_final = pd.read_csv(os.path.join(run_dir,'final.log'),delimiter="\s+")['fmax'].values.astype(float)[-1]
     if fmax_init >args.opt_fmax or fmax_final > args.opt_fmax:
         sys.exit(f'Maximum optimization step reached. System did not converged. Check your system or increase the number of optimization steps from {args.opt_steps} steps')
     
@@ -218,53 +222,30 @@ def NEB_run(params):
     images += [final_ml]
 
     # Setup NEB
-    neb_path = f'NEB.traj'
+    neb_path = os.path.join(run_dir,f'NEB.traj')
     neb = NEB(images,allow_shared_calculator=True, climb=args.climb)#, parallel=parallel)#, method="improvedtangent")
     neb.interpolate(mic=True)
-    write('neb_initial.traj', images)
+    write(os.path.join(run_dir,'neb_initial.traj'), images)
 
     # Set up the calculators
     for i, image in enumerate(images):
-        image.calc = ML_class.calculator
+        image.calc = ml_calc
         image.get_potential_energy()
 
     # Run the NEB
     logger.info('Running NEB calculation')
     optimizer = ML_class.opt_class(neb,trajectory=neb_path,logfile=neb_path.replace('xyz','log'))
         
-    def printenergy(a=images):  # store a reference to atoms in the definition.
-        """Function to print the potential, kinetic and total energy."""
-        for i in range(1,args.num_img+1):
-            ensemble = a[i].calc.results['ensemble']
-            epot = a[i].get_potential_energy()
-            ekin = a[i].get_kinetic_energy()
-            
-            # Calculate ensemble properties
-            ensemble['forces_var_mean'] = np.mean(ensemble['forces_var'])
-            ensemble['forces_sd'] = np.mean(np.sqrt(ensemble['forces_var']))
-            ensemble['forces_l2_var'] = np.mean(ensemble['forces_l2_var'])
-
-            # Format ensemble for logging
-            ensemble_formatted = ", ".join(
-                    ["{}={:.5f}".format(k, np.mean(v)) for (k, v) in ensemble.items()]
-                )
-     
-            logger.info(f"Image={i} Epot={epot} {ensemble_formatted}")
-    
-
-    
-    optimizer.attach(printenergy, interval=args.print_step)
-    logger.info('run')
     optimizer.run(fmax=args.neb_fmax, steps=args.neb_steps)
     logger.info('NEB calculation done')
 
     
     ### Do small MD sim on a few NEB images
     # Finding the last structures of NEB.
-    traj_old = Trajectory('NEB.traj')
+    traj_old = Trajectory(os.path.join(run_dir,'NEB.traj') )
     ind = args.num_img+2 #last x images, including initial and final image
     traj_NEB = traj_old[-ind:]
-    write('NEB_MD.traj',traj_NEB)
+    write(os.path.join(run_dir,'NEB_MD.traj'),traj_NEB)
     
     #Finding the largest energies
     if args.num_MD:
@@ -308,7 +289,7 @@ def NEB_run(params):
         dyn.attach(printenergy_MD, interval=1)
         
         logger.debug(f'MD starts for Image: {i} for {args.time_step_MD} fs')
-        traj = Trajectory('NEB_MD.traj', 'a',atoms)
+        traj = Trajectory(os.path.join(run_dir,'NEB_MD.traj'), 'a',atoms)
         dyn.attach(traj.write, interval=args.time_step_MD)
         dyn.run(args.time_MD)
     return

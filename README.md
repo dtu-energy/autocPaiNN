@@ -1,11 +1,21 @@
 # auto-cPaiNN
-Auto-cPaiNN is a an active learning workflow for training the [cPaiNN](https://github.com/dtu-energy/cPaiNN) model on a specific phase space. It is based on [Curator](https://doi.org/10.26434/chemrxiv-2024-p5t3l) and initialized using [PerQueue](https://doi.org/10.1039/D4DD00134F). Please side all three papers when using this workflow.
+Auto-cPaiNN is a an active learning workflow for training the [cPaiNN](https://github.com/dtu-energy/cPaiNN) model on a specific phase space. It is based on [Curator](https://doi.org/10.26434/chemrxiv-2024-p5t3l) and initialized using [PerQueue](https://doi.org/10.1039/D4DD00134F). Please cite all three papers when using this workflow.
 
-To provide an example workflow, data have been provided from the [the polyanaion sodium cathode dataset](https://doi.org/10.11583/DTU.27202446) and should be cited using doi: 0.11583/DTU.27202446. To get the training data for the cPaiNN model, please download it at the [database](https://doi.org/10.11583/DTU.27202446).
+To provide an example workflow, data have been provided from the [the polyanaion sodium cathode dataset](https://doi.org/10.11583/DTU.27202446) and should be cited using doi: 0.11583/DTU.27202446.
 
-To run cPaiNN please download the dependincies:
+To run autocPaiNN please download the dependincies:
 ```bash
 pip install -r requirement.txt
+```
+
+PerQueue is not pip initilized at the moment, but is installed using:
+```bash
+pip install git+https://gitlab.com/asm-dtu/perqueue.git
+```
+
+The same is the case for cPaiNN, which is installed using the command:
+```bash
+pip install git+https://github.com/dtu-energy/cPaiNN
 ```
 
 The workflow diagram is vizualized below and comes from the [PerQueue paper](https://doi.org/10.1039/D4DD00134F) :
@@ -20,9 +30,9 @@ The workflow consist of four steps.
 4) labeling: Do single point DFT on the sampled set and add the data to the training set
 These four steps are continued untill the user decide that a satisfactory result have been achieved. 
 
-All parameters for these steps are set in the "config.toml". The parameters shoudl eitehr be self explantory or explained in the file. 
-IMPORTANT: The stuctures picked in simulate goes trough step 2-4 so do not change the name of the structure. For example "NaFePO4" and "NaFePO4_NEB" are names for two different systems and should not be changed doing the workflow. More/less systems can be added/removed and will then be included in the begining of the next iteration of the workflow.
-Also note that for each system one can change the main parameters of the workflow step, but a "dummy" parameter needs to be added to the main parameters. This is especially important for the "labeling" step and the VASP parameters.
+All parameters for these steps are set in the "config.toml". The parameters should either be self explantory or explained in the file. 
+IMPORTANT: The stuctures picked in simulate goes trough step 2-4 so do not change the name of the structure. For example "NaFePO4_300K" and "NaFePO4_NEB" are names for two different systems and should not be changed doing the workflow. If you want more/less systems they can be added/removed during either the label or traning step and will then be included in the begining of the next iteration of the workflow.
+Also note that for each system one can change the main parameters of the workflow step, but a "dummy" parameter needs to be added to the main parameters. As an example consider "NaFePO4_300K" and "NaFePO4_100K", where the MD temperature differes. This is especially important for the "labeling" step and the VASP parameters.
 
 To initialize the workflow, one needs first to initialize PerQueue and MyQueue.
 To initialize PerQueue

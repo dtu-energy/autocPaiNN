@@ -43,13 +43,11 @@ def main(cfg,run_list,**kwargs):
         os.makedirs(system_dir)
     except FileExistsError:
         pass
-
+    
     # Add random seed and model path to the trained MLPs
     params['random_seed'] = main_params['global']['random_seed']
     params['model_path'] = os.path.join(run_path,'train', f'iter_{iter_idx}')
 
-    # Move to the system directory and run the simulation
-    os.chdir(system_dir)
 
     # Run the simulation methods
     if method == 'MD':
@@ -60,10 +58,10 @@ def main(cfg,run_list,**kwargs):
             params['init_traj'] = MD_path
 
         # Run the MD simulation
-        MD(params)
+        MD(params,run_dir=system_dir)
 
     elif method == 'NEB':
-        NEB_run(params)
+        NEB_run(params,run_dir=system_dir)
 
     else:
         raise NotImplementedError(f"Method {method} not implemented")

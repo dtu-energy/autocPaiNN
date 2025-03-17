@@ -9,14 +9,7 @@ import sys, os, json
 import argparse
 import logging
 from cPaiNN.relax import ML_Relaxer
-
-
-def setup_seed(seed):
-     torch.manual_seed(seed)
-     if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-     np.random.seed(seed)
-     torch.backends.cudnn.deterministic = True
+from cPaiNN.utils import setup_seed
 
 def get_arguments(arg_list=None):
     parser = argparse.ArgumentParser(
@@ -113,9 +106,19 @@ def get_arguments(arg_list=None):
 
     return parser.parse_args(arg_list)
 
-def update_namespace(ns, d):
+def update_namespace(ns:argparse.Namespace, d:dict) -> None:
+    """
+
+    Update the namespace with the dictionary.
+
+    Args:
+        ns: The namespace to update
+        d: The dictionary to update the namespace with
+    
+    """
     for k, v in d.items():
-        ns.__dict__[k] = v
+        if not ns.__dict__.get(k):
+            ns.__dict__[k] = v
 
 class CallsCounter:
     def __init__(self, func):
@@ -125,10 +128,9 @@ class CallsCounter:
         self.calls += 1
         self.func(*args, **kwargs)
 
-def MD(params:dict):
+def MD(params:dict,run_dir:str='.') -> None:
     # Create device
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    logging.info(f"Using device: {device}")
 
     # Put a tensor on the device before loading data
     # This way the GPU appears to be in use when other users run gpustat
@@ -149,10 +151,10 @@ def MD(params:dict):
     logger = logging.getLogger(__file__)
     logger.setLevel(logging.DEBUG)
 
-    runHandler = logging.FileHandler('md.log', mode='w')
+    runHandler = logging.FileHandler(os.path.join(run_dir,'md.log'), mode='w')
     runHandler.setLevel(logging.DEBUG)
     runHandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)7s - %(message)s"))
-    errorHandler = logging.FileHandler('error.log', mode='w')
+    errorHandler = logging.FileHandler(os.path.join(run_dir,'error.log'), mode='w')
     errorHandler.setLevel(logging.WARNING)
     errorHandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)7s - %(message)s"))
 
@@ -161,6 +163,7 @@ def MD(params:dict):
     logger.addHandler(logging.StreamHandler())
     logger.warning = CallsCounter(logger.warning)
     logger.info = CallsCounter(logger.info)
+    logging.info(f"Using device: {device}")
 
     # set up md start configuration
     images = read(args.init_traj, ':')
@@ -181,7 +184,7 @@ def MD(params:dict):
     atoms.calc = ml_calc
     atoms.get_potential_energy()
 
-    collect_traj = Trajectory('warning_struct.traj', 'w')
+    collect_traj = Trajectory(os.path.join(run_dir,'warning_struct.traj'), 'w')
     @CallsCounter
     def printenergy(a=atoms):  # store a reference to atoms in the definition.
         """Function to print the potential, kinetic and total energy."""
@@ -236,7 +239,7 @@ def MD(params:dict):
     dyn = Langevin(atoms, args.time_step * units.fs, temperature_K=args.temperature, friction=args.friction)
     dyn.attach(printenergy, interval=args.print_step)
 
-    traj = Trajectory('MD.traj', 'w', atoms)
+    traj = Trajectory(os.path.join(run_dir,'MD.traj'), 'w', atoms)
     dyn.attach(traj.write, interval=args.dump_step)
     dyn.run(args.max_steps)
 

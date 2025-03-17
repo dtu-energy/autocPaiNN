@@ -1,0 +1,6 @@
+myqueue==24.1.0
+ase
+tqdm
+matplotlib
+numpy
+pandas

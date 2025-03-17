@@ -5,8 +5,6 @@ import argparse, toml
 from pathlib import Path
 import logging
 from ase.io import read
-import torch
-
 from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
 
 def get_arguments(arg_list=None):
@@ -76,7 +74,16 @@ def get_arguments(arg_list=None):
     )
     return parser.parse_args(arg_list)
 
-def update_namespace(ns, d):
+def update_namespace(ns:argparse.Namespace, d:dict) -> None:
+    """
+
+    Update the namespace with the dictionary.
+
+    Args:
+        ns: The namespace to update
+        d: The dictionary to update the namespace with
+    
+    """
     for k, v in d.items():
         if not ns.__dict__.get(k):
             ns.__dict__[k] = v
@@ -84,8 +91,11 @@ def update_namespace(ns, d):
 def main(cfg,system_name,**kwargs):
     from cPaiNN.active_learning import GeneralActiveLearning
     from cPaiNN.data import AseDataset
+    from cPaiNN.model import PainnModel
     from cPaiNN.relax import ML_Relaxer
-    from workflow.train_functions import setup_seed
+    import torch
+    from cPaiNN.utils import setup_seed
+
 
     # Create device
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -138,20 +148,36 @@ def main(cfg,system_name,**kwargs):
     # System directory
     run_path = main_params['global']['run_path']
     system_dir = os.path.join(run_path,task_name, f'iter_{iter_idx}',system_name)
-    # Move to the system directory and run the simulation
+    # Create the iteration directory
     if not os.path.exists(system_dir):
         os.makedirs(system_dir)
-    os.chdir(system_dir)
 
     # Save parsed arguments
-    with open(os.path.join( "arguments.json"), "w") as f:
+    with open(os.path.join(system_dir,"arguments.json"), "w") as f:
         json.dump(vars(args), f)
 
     # Load models
-    ML_class = ML_Relaxer(calc_name=args.model_name,calc_paths=args.model_path,device=device)
-    if not ML_class.ensemble:
-        raise NotImplementedError("Only ensemble training is supported at the moment")
-    models = ML_class.models
+    if args.model_name != 'cpainn':
+        raise NotImplementedError("Only cpainn model is supported at the moment")
+    models = []
+    model_pth = Path(args.model_path).rglob('*best_model.pth')
+    print(args.model_path)
+    models = []
+    for each in model_pth:
+        state_dict = torch.load(each, map_location=torch.device(device)) 
+        model = PainnModel(
+            num_interactions=state_dict["num_layer"], 
+            hidden_state_size=state_dict["node_size"], 
+            cutoff=state_dict["cutoff"],
+            compute_forces=state_dict["compute_forces"],
+            compute_stress=state_dict["compute_stress"],
+            compute_magmom=state_dict["compute_magmom"],
+            compute_bader_charge=state_dict["compute_bader_charge"],
+            )
+        model.to(device)
+        model.load_state_dict(state_dict["model"],)    
+        models.append(model)
+
 
     # Test if models is a list and there is a pool set and train set
     assert isinstance(models, list)
@@ -164,7 +190,7 @@ def main(cfg,system_name,**kwargs):
         format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
         handlers=[
             logging.FileHandler(
-                "log.txt", mode="w"
+                os.path.join(system_dir,"log.txt"), mode="w"
             ),
             logging.StreamHandler(),
         ],
@@ -230,7 +256,7 @@ def main(cfg,system_name,**kwargs):
         'selected': al_idx,
     }
 
-    with open('selected.json', 'w') as f:
+    with open(os.path.join(system_dir,'selected.json'), 'w') as f:
         json.dump(al_info, f)
 
     return True, {'system_name':system_name}

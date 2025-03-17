@@ -1,6 +1,4 @@
 import os 
-print(os.environ['CONDA_DEFAULT_ENV'])
-
 import numpy as np
 import math
 import json, sys, toml
@@ -172,31 +170,11 @@ def update_namespace(ns:argparse.Namespace, d:dict) -> None:
         if not ns.__dict__.get(k):
             ns.__dict__[k] = v
 
-class EarlyStopping() :
-    """
-    Early stopping to stop the training when the loss does not improve after certain epochs.
-
-    """
-    def __init__(self, patience=5, min_delta=0):
-
-        self.patience = patience
-        self.min_delta = min_delta
-        self.counter = 0
-        self.early_stop = False
-
-    def __call__(self, val_loss, best_loss):
-        if val_loss - best_loss > self.min_delta:
-            self.counter +=1
-            if self.counter >= self.patience:  
-                self.early_stop = True
-                
-        return self.early_stop
-
 def main(cfg, **kwargs):
     from cPaiNN.data import AseDataset, collate_atomsdata
     from cPaiNN.model import PainnModel
     import torch
-    from workflow.train_functions import eval_model, get_normalization, forces_criterion, split_data, setup_seed
+    from cPaiNN.utils import setup_seed, get_normalization, eval_model, forces_criterion, bader_charge_loss_func, split_data, EarlyStopping
 
     # Load perqueue index
     idx, *_ =kwargs[INDEX_KW]
@@ -224,11 +202,9 @@ def main(cfg, **kwargs):
     # Creating the iteration folder and create the return parameters for the next iteration (will be updated later with the number of simualtion runs)
     if ITER_KW not in kwargs:
         iter_idx = 0
-        return_parameters = {}
     else:
         iter_idx, *_ = kwargs[ITER_KW]
         iter_idx += 1
-        return_parameters = {CYCLICALGROUP_KEY: args.stop_after_train,}
     
     # Get run path
     run_path = main_params['global']['run_path']
@@ -239,14 +215,15 @@ def main(cfg, **kwargs):
         os.makedirs(iter_dir)
     except FileExistsError:
         pass
-    # Move to the iteration directory
-    os.chdir(iter_dir)
 
     # Setup random seed
     setup_seed(args.random_seed)
 
     # Create output directory if it does not exist
-    os.makedirs(args.output_dir, exist_ok=True)
+    total_output_dir = os.path.join(iter_dir,args.output_dir)
+    os.makedirs(total_output_dir, exist_ok=True)
+    # Update the output directory
+    args.output_dir = total_output_dir
 
     # Try to find model from previous iteration
     if iter_idx > 0:
@@ -380,7 +357,7 @@ def main(cfg, **kwargs):
         net.load_state_dict(state_dict["model"])
         scheduler.load_state_dict(state_dict["scheduler"])
     
-    # Train model 
+        # Train model 
     for epoch in itertools.count():
 
         # Loop over each batch in training set
@@ -393,13 +370,12 @@ def main(cfg, **kwargs):
                 k: v.to(device=device, non_blocking=True)
                 for (k, v) in batch_host.items()
             }
-            print('batch',batch.keys())
             # Reset gradient
             optimizer.zero_grad()
             
             # Forward pass 
-            outputs = net(batch)   
-            
+            outputs = net(batch)            
+          
             # Compute loss
             # Energy loss
             energy_loss = criterion(outputs["energy"], batch["energy"])
@@ -421,14 +397,16 @@ def main(cfg, **kwargs):
             # Charge loss
             if isinstance(charge_key,list):
                 magmom_loss = criterion(outputs['magmom'], batch['magmom'])
-                bader_charge_loss = criterion(outputs['bader_charge'], batch['bader_charge'])
+                bader_charge_loss = bader_charge_loss_func(outputs['bader_charge'], batch['bader_charge'])
                 charge_loss = magmom_loss + bader_charge_loss
 
             elif isinstance(charge_key,str):
-                charge_loss = criterion(outputs[charge_key], batch[charge_key])
+                if charge_key == 'bader_charge':
+                    charge_loss = bader_charge_loss_func(outputs['bader_charge'], batch['bader_charge'])
+                else:
+                    charge_loss = criterion(outputs[charge_key], batch[charge_key])
             else:
                 charge_loss = 0.0
-
             # Total loss
             total_loss = (
                 args.forces_weight * forces_loss
@@ -485,7 +463,7 @@ def main(cfg, **kwargs):
                 # reduce learning rate
                 if args.plateau_scheduler:
                     scheduler.step(smooth_loss)
-                
+                                
                 # Save checkpoint
                 if not early_stop(math.sqrt(smooth_loss), best_val_loss):
                     best_val_loss = math.sqrt(smooth_loss)
@@ -511,10 +489,14 @@ def main(cfg, **kwargs):
                     logging.info("Early stopping")
                     
                     # Find simulation keys
-                    run_list = list(main_params['Simulate']['runs'].keys())
+                    run_list = list(main_params['simulate']['runs'].keys())
                     dmkey = len(run_list)
-                    return_parameters[DYNAMICWIDTHGROUP_KEY] = dmkey
-                    return_parameters['run_list'] = str(run_list)
+                    return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey, 'run_list':str(run_list)}
+
+                    # Include the stop after train parameter
+                    if iter_idx > 0:
+                        return_parameters[CYCLICALGROUP_KEY] = args.stop_after_train
+
                     return True , return_parameters
 
             step += 1
@@ -544,10 +526,14 @@ def main(cfg, **kwargs):
                     os.path.join(args.output_dir, "exit_model.pth"),
                 )
                 # Find simulation keys
-                run_list = list(main_params['Simulate']['runs'].keys())
+                run_list = list(main_params['simulate']['runs'].keys())
                 dmkey = len(run_list)
-                return_parameters[DYNAMICWIDTHGROUP_KEY] = dmkey
-                return_parameters['run_list'] = str(run_list)
+                return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey, 'run_list':str(run_list)}
+                return_parameters[CYCLICALGROUP_KEY] = args.stop_after_train
+                # Include the stop after train parameter
+                if iter_idx > 0:
+                        return_parameters[CYCLICALGROUP_KEY] = args.stop_after_train
+                print(return_parameters)
                 return True , return_parameters
 
 if __name__ == "__main__":

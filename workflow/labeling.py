@@ -8,9 +8,50 @@ import json
 import toml
 from pathlib import Path
 from ase.calculators.calculator import CalculationFailed
+import re
 
 from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
 
+def get_converged_structures(INCAR_file,OSZICAR_file) -> list:
+    """
+    Get the converged structures from OUTCAR file
+    Parameters
+    ----------
+    root_dir : str
+        The root directory of the calculation
+
+    Returns
+    -------
+    list of ase.Atoms objects 
+    """
+    # Get nelm from INCAR
+    with open(INCAR_file, 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            if 'NELM = ' in line:
+                nelm =int(line.split('=')[-1].strip())
+                break
+    # Get index of converged calculations
+    scf_list = []
+    with open(OSZICAR_file, 'r') as f:
+        lines = f.readlines()
+        for i, line in enumerate(lines):
+            if 'F=' in line:
+                header = lines[i-1].split(':')[0]
+                scf = int(re.search(header+r':\s+(\d+)', lines[i-1]).group(1))
+                scf_list.append(scf)
+    # Single point calculation
+    if len(scf_list) == 1:          
+        if scf != nelm:
+            return True
+        else:
+            return False
+    # Relaxation calculation
+    else:
+        if scf_list[-1] != nelm:
+            return True
+        else:
+            return False
 
 def get_arguments(arg_list=None):
     parser = argparse.ArgumentParser(
@@ -45,12 +86,22 @@ def get_arguments(arg_list=None):
 
     return parser.parse_args(arg_list)
 
-def update_namespace(ns, d):
+def update_namespace(ns:argparse.Namespace, d:dict) -> None:
+    """
+
+    Update the namespace with the dictionary.
+
+    Args:
+        ns: The namespace to update
+        d: The dictionary to update the namespace with
+    
+    """
     for k, v in d.items():
-        if not isinstance(v, dict):
+        if not ns.__dict__.get(k):
             ns.__dict__[k] = v
 
 def main(cfg,system_name,**kwargs):
+
     # Load iteration index
     iter_idx,*_ = kwargs[ITER_KW]
 
@@ -86,17 +137,17 @@ def main(cfg,system_name,**kwargs):
     # System directory
     run_path = main_params['global']['run_path']
     system_dir = os.path.join(run_path,task_name, f'iter_{iter_idx}',system_name)
-    # Move to the system directory and run the simulation
+    print(f"Running DFT calculations in {system_dir}")
+    # Create the iteration directory
     if not os.path.exists(system_dir):
         os.makedirs(system_dir)
-    os.chdir(system_dir)
 
     # Save parsed arguments
-    with open(os.path.join( "arguments.json"), "w") as f:
+    with open(os.path.join( system_dir,"arguments.json"), "w") as f:
         json.dump(vars(args), f)
 
     # Set up dataframe and load possible converged data id's
-    db = connect('dft_structures.db')
+    db = connect(os.path.join(system_dir,'dft_structures.db'))
     db_al_ind = [row.al_ind for row in db.select([('converged','=','True')])]
     
     # Get images and set parameters
@@ -125,14 +176,14 @@ def main(cfg,system_name,**kwargs):
     if params['method'] =='VASP':
         from ase.calculators.vasp import Vasp
         # set environment variables
-        os.putenv('ASE_VASP_VDW', '/home/energy/modules/software/VASP/vasp-potpaw-5.4')
-        os.putenv('VASP_PP_PATH', '/home/energy/modules/software/VASP/vasp-potpaw-5.4')
-        os.putenv('ASE_VASP_COMMAND', 'mpirun vasp_std')
+        #os.putenv('ASE_VASP_VDW', '/home/energy/modules/software/VASP/vasp-potpaw-5.4')
+        #os.putenv('VASP_PP_PATH', '/home/energy/modules/software/VASP/vasp-potpaw-5.4')
+        #os.putenv('ASE_VASP_COMMAND', 'mpirun vasp_std')
 
         # Update the parameters
         vasp_params.update(system_params)
 
-        calc = Vasp(**vasp_params)
+        calc = Vasp(**vasp_params,directory=system_dir)
         unconverged_idx = []
         for i, atoms in enumerate(images):
             al_ind = al_indices[i]
@@ -144,28 +195,31 @@ def main(cfg,system_name,**kwargs):
                 check_result = True
                 db.write(atoms,al_ind=al_ind,converged=False)
                 unconverged_idx.append(i)
-                copy('OSZICAR', f'OSZICAR_{i}_{al_ind}')
-                copy('CHGCAR', f'CHGCAR_{i}_{al_ind}')
-                os.remove('CHGCAR')
+                copy(os.path.join(system_dir,'OSZICAR'), os.path.join(system_dir,f'OSZICAR_{i}_{al_ind}'))
+                copy(os.path.join(system_dir,'CHGCAR'), os.path.join(system_dir,f'CHGCAR_{i}_{al_ind}'))
+                os.remove(os.path.join(system_dir,'CHGCAR'))
+                os.remove(os.path.join(system_dir,'OSZICAR'))
                 continue
 
-            steps = int(subprocess.getoutput('grep LOOP OUTCAR | wc -l'))
-            if steps <= vasp_params['nelm']:
+            # Check if the calculation is converged
+            converged = get_converged_structures(os.path.join(system_dir,'INCAR'),os.path.join(system_dir,'OSZICAR'))
+            if converged:
                 db.write(atoms,al_ind=al_ind,converged=True)
             else:
                 check_result = True
                 db.write(atoms,al_ind=al_ind,converged=False)
                 unconverged_idx.append(i)
-            copy('OSZICAR', f'OSZICAR_{i}_{al_ind}')
-            copy('CHGCAR', 'CHGCAR_{i}_{al_ind}')
+            copy(os.path.join(system_dir,'OSZICAR'), os.path.join(system_dir,f'OSZICAR_{i}_{al_ind}'))
+            copy(os.path.join(system_dir,'CHGCAR'), os.path.join(system_dir,f'CHGCAR_{i}_{al_ind}') )
 
-            os.remove('WAVECAR')
-            os.remove('CHGCAR')
+            os.remove(os.path.join(system_dir,'WAVECAR'))
+            os.remove(os.path.join(system_dir,'CHGCAR'))
+            os.remove(os.path.join(system_dir,'OSZICAR'))
 
     elif params['method'] =='GPAW':
         from gpaw import GPAW, KohnShamConvergenceError
         gpaw_params.update(system_params)
-        calc = GPAW(**gpaw_params)
+        calc = GPAW(**gpaw_params,txt=os.path.join(system_dir,'GPAW.txt') )
         calc.set(txt='GPAW.txt')
         unconverged_idx = []
         for i, atoms in enumerate(images):
@@ -178,11 +232,11 @@ def main(cfg,system_name,**kwargs):
                 check_result = True
                 db.write(atoms,al_ind=al_ind,converged=False)
                 unconverged_idx.append(i)
-                copy('GPAW.txt', f'GPAW_{i}_{al_ind}.txt')
+                copy(os.path.join(system_dir,'GPAW.txt'), os.path.join(system_dir,f'GPAW_{i}_{al_ind}.txt'))
                 continue
 
             db.write(atoms,al_ind=al_ind,converged=True)
-            copy('GPAW.txt', f'GPAW_{i}_{al_ind}.txt')
+            copy(os.path.join(system_dir,'GPAW.txt'), os.path.join(system_dir,f'GPAW_{i}_{al_ind}.txt'))
     else:
         raise RuntimeError('Valid configarations for DFT calculation should be provided!')
 
@@ -192,7 +246,7 @@ def main(cfg,system_name,**kwargs):
     # write to training set
     if args.train_set:
         train_traj = Trajectory(args.train_set, mode = 'a')
-        database = connect('dft_structures.db')#read('dft_structures.traj', ':')
+        database = connect(os.path.join(system_dir,'dft_structures.db'))
         for row in database.select([('converged','=','True')]):
             atom = row.toatoms()
             atom.info['system'] = args.system
