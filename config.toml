@@ -1,7 +1,7 @@
 [global] #Global paramters
 run_path = '/home/energy/mahpe/Published_code/autocPaiNN/Example'     #Where you want to run the code. The Directoru will be created in "pq_submit.py"
 random_seed = 3407     #A random seed used for the ML model. This is used for the whole workflow.
-max_iteration = 3     #Maximum number of itertaion to run the workflow. The worklow can be stopped earlier
+max_iteration = 2     #Maximum number of itertaion to run the workflow. The worklow can be stopped earlier
 
 ### 1) Train step ###
 [train] #Main parameters
@@ -65,7 +65,7 @@ time_MD = 10      # The total time of the MD simualtion
 time_step_MD = 1     # The time step of the MD simualtion
 print_step = 1     # The interval for saving MD simulation information
 
-# Here we list the 5 systems used in this workflow (NaCoPO4,NaMnPO4,NaNiPO4,NaFePO4 and NaFePO4_NEB)
+# Here we list the 3 systems used in this workflow (NaCoPO4,NaMnPO4,NaNiPO4,NaFePO4 and NaFePO4_NEB)
 [simulate.runs.NaFePO4_300K]
 method = 'MD'
 temperature = 300
