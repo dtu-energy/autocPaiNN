@@ -33,7 +33,7 @@ def main(cfg,run_list,**kwargs):
 
     # Update the simulation method parameters with the system name
     params.update(system_params)
-    
+
     # Make folder for the system
     # Get run path
     run_path = main_params['global']['run_path']
@@ -48,6 +48,9 @@ def main(cfg,run_list,**kwargs):
     params['random_seed'] = main_params['global']['random_seed']
     params['model_path'] = os.path.join(run_path,'train', f'iter_{iter_idx}')
 
+    # Save the total parameters
+    with open(os.path.join(system_dir, "params.toml"), "w") as f:
+        toml.dump(params, f)
 
     # Run the simulation methods
     if method == 'MD':

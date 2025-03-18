@@ -222,8 +222,6 @@ def main(cfg, **kwargs):
     # Create output directory if it does not exist
     total_output_dir = os.path.join(iter_dir,args.output_dir)
     os.makedirs(total_output_dir, exist_ok=True)
-    # Update the output directory
-    args.output_dir = total_output_dir
 
     # Try to find model from previous iteration
     if iter_idx > 0:
@@ -232,6 +230,9 @@ def main(cfg, **kwargs):
             MLP_path = os.path.join(run_path,task_name, f'iter_{iter_idx-1}',args.output_dir)
             if os.path.exists(MLP_path):
                 args.load_model = os.path.join(MLP_path, "best_model.pth")
+
+    # Update the output directory
+    args.output_dir = total_output_dir
 
     # Setup logging
     logging.basicConfig(
@@ -269,10 +270,17 @@ def main(cfg, **kwargs):
     # Create device
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     logging.info(f"Using device: {device}")
-
+    logging.info(f"Iteration: {iter_idx}")
+    
     # Put a tensor on the device before loading data
     # This way the GPU appears to be in use when other users run gpustat
     torch.tensor([0], device=device)
+
+    # Save the toml parameters with load model
+    if args.load_model:
+        params['load_model'] = args.load_model
+    with open(os.path.join(args.output_dir, "params.toml"), "w") as f:
+        toml.dump(params, f)
 
     # Setup dataset and loader
     logging.info("loading data %s", args.dataset)

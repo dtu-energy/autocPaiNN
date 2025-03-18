@@ -146,6 +146,10 @@ def main(cfg,system_name,**kwargs):
     with open(os.path.join( system_dir,"arguments.json"), "w") as f:
         json.dump(vars(args), f)
 
+    # Save the total parameters
+    with open(os.path.join(system_dir, "params.toml"), "w") as f:
+        toml.dump(params, f)
+    
     # Set up dataframe and load possible converged data id's
     db = connect(os.path.join(system_dir,'dft_structures.db'))
     db_al_ind = [row.al_ind for row in db.select([('converged','=','True')])]

@@ -142,7 +142,7 @@ def MD(params:dict,run_dir:str='.') -> None:
     update_namespace(args, params)
 
     # Save parsed arguments
-    with open(os.path.join( "arguments.json"), "w") as f:
+    with open(os.path.join(run_dir, "arguments.json"), "w") as f:
         json.dump(vars(args), f)
 
     setup_seed(args.random_seed)

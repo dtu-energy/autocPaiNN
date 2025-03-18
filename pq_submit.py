@@ -39,7 +39,7 @@ main_argument = {'cfg':str(main_path/'config.toml')}
 Train = Task(main_path/'workflow/train.py', name='Train MLP model', args=main_argument, resources=Train_resources)
 Simulation = Task(main_path/'workflow/simulation.py', name='Run ML simulation', args=main_argument, resources=Simulation_resources)
 Activelearning = Task(main_path/'workflow/al_select.py', name='Run active learning', args=main_argument, resources=Activelearning_resources)
-Labeling = Task(main_path/'workflow/labeling.py', name='Run DFT labeling', args=main_argument, resources=Labeling_resources)
+Labeling = Task(main_path/'workflow/labeling_test.py', name='Run DFT labeling', args=main_argument, resources=Labeling_resources)
 
 ### Set Task Groups ###
 # If you perform ensemble training more models are train or else one main model is trained 

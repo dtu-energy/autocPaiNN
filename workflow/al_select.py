@@ -156,6 +156,10 @@ def main(cfg,system_name,**kwargs):
     with open(os.path.join(system_dir,"arguments.json"), "w") as f:
         json.dump(vars(args), f)
 
+    # Save toml parameters
+    with open(os.path.join(system_dir, "params.toml"), "w") as f:
+        toml.dump(params, f)
+
     # Load models
     if args.model_name != 'cpainn':
         raise NotImplementedError("Only cpainn model is supported at the moment")

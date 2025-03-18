@@ -1,7 +1,7 @@
 [global] #Global paramters
 run_path = '/home/energy/mahpe/Published_code/autocPaiNN/Example'     #Where you want to run the code. The Directoru will be created in "pq_submit.py"
 random_seed = 3407     #A random seed used for the ML model. This is used for the whole workflow.
-max_iteration = 10     #Maximum number of itertaion to run the workflow. The worklow can be stopped earlier
+max_iteration = 3     #Maximum number of itertaion to run the workflow. The worklow can be stopped earlier
 
 ### 1) Train step ###
 [train] #Main parameters
@@ -41,7 +41,7 @@ load_prev_iter_model = true     #Load previose models from earlier itertaions
 # Main molecular dynamics(MD) paramaters. Can be updated by each system #
 [simulate.MD] 
 time_step = 1     # MD timestep in fs
-temperature = 300      # The temperature of the MD simulation
+temperature = 100      # The temperature of the MD simulation
 start_indice = -1     # Uses the larst image in your trajectory as a starting point for the MLP MD
 max_steps = 100     # Maximum steps the MLP MD simulation can take
 min_steps = 100     # Minimum steps the MLP MD simulation can take
@@ -68,12 +68,12 @@ print_step = 1     # The interval for saving MD simulation information
 # Here we list the 5 systems used in this workflow (NaCoPO4,NaMnPO4,NaNiPO4,NaFePO4 and NaFePO4_NEB)
 [simulate.runs.NaFePO4_300K]
 method = 'MD'
-temperature_MD = 300
+temperature = 300
 init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4.traj' #CHANGE to correct path. System path
 
 [simulate.runs.NaFePO4_1000K]
 method = 'MD'
-temperature_MD = 1000
+temperature = 1000
 init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4.traj' #CHANGE to correct path. System path
 
 
