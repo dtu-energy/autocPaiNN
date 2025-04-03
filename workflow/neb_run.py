@@ -1,7 +1,6 @@
-from ase.io.trajectory import Trajectory
 from ase.md.langevin import Langevin
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
-from ase.io import read, write, Trajectory
+from ase.io import read, write
 from ase import units
 from ase.neb import NEB, NEBTools
 
@@ -136,8 +135,8 @@ def update_namespace(ns:argparse.Namespace, d:dict) -> None:
     
     """
     for k, v in d.items():
-        if not ns.__dict__.get(k):
-            ns.__dict__[k] = v
+        
+        ns.__dict__[k] = v
 
 class CallsCounter:
     def __init__(self, func):
@@ -201,12 +200,12 @@ def NEB_run(params:dict,run_dir:str='.') -> None:
     # Perform geometry optimization for initial and final images
     logger.info('Optimizing images with the MLP')
     initial_results=ML_class.relax(initial_dft, fmax=args.opt_fmax, steps=args.opt_steps,
-                                    traj_file=os.path.join(run_dir,f'initial.traj'), 
+                                    traj_file=os.path.join(run_dir,f'initial.xyz'), 
                                     log_file=os.path.join(run_dir,f'initial.log'), interval=1)
     initial_ml = initial_results['final_structure']
     
     final_results=ML_class.relax(final_dft, fmax=args.opt_fmax, steps=args.opt_steps,
-                                    traj_file=os.path.join(run_dir,f'final.traj'), 
+                                    traj_file=os.path.join(run_dir,f'final.xyz'), 
                                     log_file=os.path.join(run_dir,f'final.log'), interval=1)
     final_ml = final_results['final_structure']
 
@@ -222,10 +221,10 @@ def NEB_run(params:dict,run_dir:str='.') -> None:
     images += [final_ml]
 
     # Setup NEB
-    neb_path = os.path.join(run_dir,f'NEB.traj')
+    neb_path = os.path.join(run_dir,f'NEB.xyz')
     neb = NEB(images,allow_shared_calculator=True, climb=args.climb)#, parallel=parallel)#, method="improvedtangent")
     neb.interpolate(mic=True)
-    write(os.path.join(run_dir,'neb_initial.traj'), images)
+    write(os.path.join(run_dir,'neb_initial.xyz'), images)
 
     # Set up the calculators
     for i, image in enumerate(images):
@@ -242,10 +241,10 @@ def NEB_run(params:dict,run_dir:str='.') -> None:
     
     ### Do small MD sim on a few NEB images
     # Finding the last structures of NEB.
-    traj_old = Trajectory(os.path.join(run_dir,'NEB.traj') )
+    traj_old = read(os.path.join(run_dir,'NEB.xyz'),':')
     ind = args.num_img+2 #last x images, including initial and final image
     traj_NEB = traj_old[-ind:]
-    write(os.path.join(run_dir,'NEB_MD.traj'),traj_NEB)
+    write(os.path.join(run_dir,'NEB_MD.xyz'),traj_NEB)
     
     #Finding the largest energies
     if args.num_MD:
@@ -287,9 +286,13 @@ def NEB_run(params:dict,run_dir:str='.') -> None:
             logger.info(f"Image={i} Epot={epot} Ekin={ekin} temperature={temp} {ensemble_formatted}")
         
         dyn.attach(printenergy_MD, interval=1)
-        
+
+        def write_xyz(a=atoms,traj_name=os.path.join(run_dir,'NEB_MD.xyz')):
+            if 'bader_charge' in a.arrays:
+                a.arrays['bader_charge'] = a.calc.results['bader_charge']
+            write(traj_name, a, append=True)
+
         logger.debug(f'MD starts for Image: {i} for {args.time_step_MD} fs')
-        traj = Trajectory(os.path.join(run_dir,'NEB_MD.traj'), 'a',atoms)
-        dyn.attach(traj.write, interval=args.time_step_MD)
+        dyn.attach(write_xyz, interval=args.time_step_MD)
         dyn.run(args.time_MD)
     return

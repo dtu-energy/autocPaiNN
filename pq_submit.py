@@ -12,10 +12,14 @@ main_path = Path('./') # path to the auto-cPaiNN code
 ### Load config file ###
 config = toml.load(main_path/'config.toml')
 
+# Setup autocPaiNN workflow path
+workflow = Path(config['global']['workflow_path'])
+
 ### Setup folders at the run directory ###
 run_path = Path(config['global']['run_path'])
 if not os.path.isdir(run_path):
     os.makedirs(run_path)
+
 
 # Setup task directory accoring to their names in config file
 if not os.path.isdir(run_path/'train'):

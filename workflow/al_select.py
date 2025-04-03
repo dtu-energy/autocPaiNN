@@ -4,7 +4,7 @@ import json
 import argparse, toml
 from pathlib import Path
 import logging
-from ase.io import read
+from ase.io import read, write
 from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
 
 def get_arguments(arg_list=None):
@@ -85,8 +85,8 @@ def update_namespace(ns:argparse.Namespace, d:dict) -> None:
     
     """
     for k, v in d.items():
-        if not ns.__dict__.get(k):
-            ns.__dict__[k] = v
+        
+        ns.__dict__[k] = v
 
 def main(cfg,system_name,**kwargs):
     from cPaiNN.active_learning import GeneralActiveLearning
@@ -129,9 +129,9 @@ def main(cfg,system_name,**kwargs):
     # Find the system dataset and update the parameters
     sytem_path = os.path.join(run_path,'simulate', f'iter_{iter_idx}',system_name)
     if method == 'MD':
-        pool_set = [os.path.join(sytem_path,'MD.traj'),os.path.join(sytem_path,'warning_struct.traj')]
+        pool_set = [os.path.join(sytem_path,'MD.xyz'),os.path.join(sytem_path,'warning_struct.xyz')]
     elif method == 'NEB':
-        pool_set = [os.path.join(sytem_path,'NEB_MD.traj')]
+        pool_set = [os.path.join(sytem_path,'NEB_MD.xyz')]
         args_system_simulate = json.load(open(os.path.join(sytem_path,'arguments.json')))
         neb_img = args_system_simulate['num_img'] + 2 # Including initial and final image
     
@@ -210,6 +210,25 @@ def main(cfg,system_name,**kwargs):
         for traj in args.pool_set:
             if Path(traj).stat().st_size > 0:
                 dataset += read(traj, index=':') 
+    
+    # Only include structures with calculators
+    dataset_new = []
+    for atoms in dataset:
+        try:
+            atoms.get_potential_energy()
+            dataset_new.append(atoms)
+        except:
+            pass
+    logging.info(f"Loaded {len(dataset_new)} structures with calculators out of {len(dataset)} structures")
+    # if there are structures without calculators, write them to a new file and update pool set
+    if len(dataset) != len(dataset_new):
+        args.pool_set = os.path.join(run_path,'simulate', f'iter_{iter_idx}',system_name,'new_pool_set.xyz')
+        write(args.pool_set,dataset_new)
+        logging.info(f"Structures with calculators are written to {args.pool_set}")
+    
+    dataset = dataset_new
+    
+
     data_dict = {
         'pool': AseDataset(dataset, cutoff=models[0].cutoff),
         'train': AseDataset(args.train_set, cutoff=models[0].cutoff),

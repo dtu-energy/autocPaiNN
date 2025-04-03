@@ -1,7 +1,7 @@
 from ase.md.langevin import Langevin
 from ase import units
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
-from ase.io import read, Trajectory
+from ase.io import read, Trajectory, write
 
 import numpy as np
 import torch
@@ -117,8 +117,8 @@ def update_namespace(ns:argparse.Namespace, d:dict) -> None:
     
     """
     for k, v in d.items():
-        if not ns.__dict__.get(k):
-            ns.__dict__[k] = v
+        
+        ns.__dict__[k] = v
 
 class CallsCounter:
     def __init__(self, func):
@@ -184,7 +184,11 @@ def MD(params:dict,run_dir:str='.') -> None:
     atoms.calc = ml_calc
     atoms.get_potential_energy()
 
-    collect_traj = Trajectory(os.path.join(run_dir,'warning_struct.traj'), 'w')
+    def write_warning_xyz(a=atoms,traj_name=os.path.join(run_dir,'warning_struct.xyz')):
+        if 'bader_charge' in a.arrays:
+            a.arrays['bader_charge'] = a.calc.results['bader_charge']
+        write(traj_name, a, append=True)
+    
     @CallsCounter
     def printenergy(a=atoms):  # store a reference to atoms in the definition.
         """Function to print the potential, kinetic and total energy."""
@@ -208,11 +212,11 @@ def MD(params:dict,run_dir:str='.') -> None:
         if ensemble['forces_sd'] > args.max_force_sd: 
             logger.error("Too large uncertainty!")
             if logger.info.calls + logger.warning.calls > args.min_steps:
-                sys.exit(0)
+                raise AssertionError("Done")
             else:
-                sys.exit("Too large uncertainty!")
+                raise ValueError(f"Too large uncertainty!, info calls: {logger.info.calls}, warning calls: {logger.warning.calls}, min calls: {args.min_steps}")
         elif ensemble['forces_sd'] > args.force_sd_threshold: 
-            collect_traj.write(a)
+            write_warning_xyz(a)
             logger.warning("Steps={:10d} Epot={:12.3f} Ekin={:12.3f} temperature={:8.2f} {} ".format(
                 printenergy.calls * args.print_step,
                 epot,
@@ -223,7 +227,7 @@ def MD(params:dict,run_dir:str='.') -> None:
             if logger.warning.calls > args.num_uncertain:
                 logger.error(f"More than {args.num_uncertain} uncertain structures are collected!")
                 if logger.info.calls + logger.warning.calls > args.min_steps:
-                    return
+                    raise AssertionError("Done")
                 else:
                     raise ValueError(f"More than {args.num_uncertain} uncertain structures are collected!")
         else:
@@ -239,8 +243,25 @@ def MD(params:dict,run_dir:str='.') -> None:
     dyn = Langevin(atoms, args.time_step * units.fs, temperature_K=args.temperature, friction=args.friction)
     dyn.attach(printenergy, interval=args.print_step)
 
-    traj = Trajectory(os.path.join(run_dir,'MD.traj'), 'w', atoms)
-    dyn.attach(traj.write, interval=args.dump_step)
-    dyn.run(args.max_steps)
+    #traj = Trajectory(os.path.join(run_dir,'MD.traj'), 'w', atoms)
+
+    def write_xyz(a=atoms,traj_name=os.path.join(run_dir,'MD.xyz')):
+        if 'bader_charge' in a.arrays:
+            a.arrays['bader_charge'] = a.calc.results['bader_charge']
+        write(traj_name, a, append=True)
+
+    dyn.attach(write_xyz, interval=args.dump_step)
+
+    try:
+        dyn.run(args.max_steps)
+    
+    # Simulations stops but is accepted
+    except AssertionError as e:
+        logger.info("Simulation stops and is accepted")
+        pass
+    
+    # Simulation stops and is rejected
+    except ValueError as e:
+        raise e
 
     return

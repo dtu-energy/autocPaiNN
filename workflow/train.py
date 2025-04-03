@@ -167,8 +167,8 @@ def update_namespace(ns:argparse.Namespace, d:dict) -> None:
     
     """
     for k, v in d.items():
-        if not ns.__dict__.get(k):
-            ns.__dict__[k] = v
+        
+        ns.__dict__[k] = v
 
 def main(cfg, **kwargs):
     from cPaiNN.data import AseDataset, collate_atomsdata
@@ -183,6 +183,12 @@ def main(cfg, **kwargs):
     with open(cfg, 'r') as f:
         main_params = toml.load(f)
     
+    # Find simulation keys
+    #run_list = list(main_params['simulate']['runs'].keys())
+    #dmkey = len(run_list)
+    #return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey, 'run_list':str(run_list)}
+    #return True, return_parameters
+
     # Load local parameters
     task_name = 'train'
     params = main_params[task_name]
@@ -537,7 +543,7 @@ def main(cfg, **kwargs):
                 run_list = list(main_params['simulate']['runs'].keys())
                 dmkey = len(run_list)
                 return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey, 'run_list':str(run_list)}
-                return_parameters[CYCLICALGROUP_KEY] = args.stop_after_train
+                
                 # Include the stop after train parameter
                 if iter_idx > 0:
                         return_parameters[CYCLICALGROUP_KEY] = args.stop_after_train

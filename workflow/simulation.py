@@ -1,12 +1,11 @@
 import os 
 import ast
 import toml
+import sys
 
 from perqueue.constants import DYNAMICWIDTHGROUP_KEY,CYCLICALGROUP_KEY, ITER_KW, INDEX_KW
 
 def main(cfg,run_list,**kwargs):
-    from workflow.md_run import MD
-    from workflow.neb_run import NEB_run
     # Load perqueue index
     idx, *_ =kwargs[INDEX_KW]
     # Load iteration index
@@ -15,6 +14,8 @@ def main(cfg,run_list,**kwargs):
     # Load all parameters from config file
     with open(cfg, 'r') as f:
         main_params = toml.load(f)
+    # Append workflow path to the main parameters
+    sys.path.append(main_params['global']['workflow_path'])
 
     # Load local parameters
     task_name = 'simulate'
@@ -54,6 +55,7 @@ def main(cfg,run_list,**kwargs):
 
     # Run the simulation methods
     if method == 'MD':
+        from workflow.md_run import MD
         # If iteration >0 then load the previous iteration MD trajcetory 
         if iter_idx > 0:
             # Load the previous iteration MD trajectory 
@@ -64,6 +66,7 @@ def main(cfg,run_list,**kwargs):
         MD(params,run_dir=system_dir)
 
     elif method == 'NEB':
+        from workflow.neb_run import NEB_run
         NEB_run(params,run_dir=system_dir)
 
     else:

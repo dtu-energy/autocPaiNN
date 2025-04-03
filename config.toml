@@ -2,6 +2,7 @@
 run_path = '/home/energy/mahpe/Published_code/autocPaiNN/Example'     #Where you want to run the code. The Directoru will be created in "pq_submit.py"
 random_seed = 3407     #A random seed used for the ML model. This is used for the whole workflow.
 max_iteration = 2     #Maximum number of itertaion to run the workflow. The worklow can be stopped earlier
+workflow_path = '/home/energy/mahpe/Published_code/autocPaiNN' # Path to autocPaiNN code
 
 ### 1) Train step ###
 [train] #Main parameters

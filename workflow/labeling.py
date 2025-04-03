@@ -97,8 +97,8 @@ def update_namespace(ns:argparse.Namespace, d:dict) -> None:
     
     """
     for k, v in d.items():
-        if not ns.__dict__.get(k):
-            ns.__dict__[k] = v
+        
+        ns.__dict__[k] = v
 
 def main(cfg,system_name,**kwargs):
 
@@ -173,8 +173,12 @@ def main(cfg,system_name,**kwargs):
     else:
         raise RuntimeError('Valid configarations for DFT calculation should be provided!')
     
-    vasp_params = params['VASP']
-    gpaw_params = params['GPAW']
+    try:
+        vasp_params = params['VASP']
+        gpaw_params = params['GPAW']
+    except KeyError as e:
+        print(f'nO parameters gievn for {e}!')
+    
     check_result = False
 
     if params['method'] =='VASP':
@@ -202,7 +206,6 @@ def main(cfg,system_name,**kwargs):
                 copy(os.path.join(system_dir,'OSZICAR'), os.path.join(system_dir,f'OSZICAR_{i}_{al_ind}'))
                 copy(os.path.join(system_dir,'CHGCAR'), os.path.join(system_dir,f'CHGCAR_{i}_{al_ind}'))
                 os.remove(os.path.join(system_dir,'CHGCAR'))
-                os.remove(os.path.join(system_dir,'OSZICAR'))
                 continue
 
             # Check if the calculation is converged
@@ -218,7 +221,6 @@ def main(cfg,system_name,**kwargs):
 
             os.remove(os.path.join(system_dir,'WAVECAR'))
             os.remove(os.path.join(system_dir,'CHGCAR'))
-            os.remove(os.path.join(system_dir,'OSZICAR'))
 
     elif params['method'] =='GPAW':
         from gpaw import GPAW, KohnShamConvergenceError
