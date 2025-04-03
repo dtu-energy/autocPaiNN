@@ -203,9 +203,13 @@ def main(cfg,system_name,**kwargs):
                 check_result = True
                 db.write(atoms,al_ind=al_ind,converged=False)
                 unconverged_idx.append(i)
-                copy(os.path.join(system_dir,'OSZICAR'), os.path.join(system_dir,f'OSZICAR_{i}_{al_ind}'))
-                copy(os.path.join(system_dir,'CHGCAR'), os.path.join(system_dir,f'CHGCAR_{i}_{al_ind}'))
-                os.remove(os.path.join(system_dir,'CHGCAR'))
+                try: # If it did not save the CHGCAR
+                    copy(os.path.join(system_dir,'OSZICAR'), os.path.join(system_dir,f'OSZICAR_{i}_{al_ind}'))
+                    copy(os.path.join(system_dir,'CHGCAR'), os.path.join(system_dir,f'CHGCAR_{i}_{al_ind}'))
+                    os.remove(os.path.join(system_dir,'CHGCAR'))
+                except FileNotFoundError as e:
+                    print(e)
+                    pass
                 continue
 
             # Check if the calculation is converged
@@ -216,11 +220,16 @@ def main(cfg,system_name,**kwargs):
                 check_result = True
                 db.write(atoms,al_ind=al_ind,converged=False)
                 unconverged_idx.append(i)
-            copy(os.path.join(system_dir,'OSZICAR'), os.path.join(system_dir,f'OSZICAR_{i}_{al_ind}'))
-            copy(os.path.join(system_dir,'CHGCAR'), os.path.join(system_dir,f'CHGCAR_{i}_{al_ind}') )
-
-            os.remove(os.path.join(system_dir,'WAVECAR'))
-            os.remove(os.path.join(system_dir,'CHGCAR'))
+            try: # If you do not save CHGCAR
+                copy(os.path.join(system_dir,'OSZICAR'), os.path.join(system_dir,f'OSZICAR_{i}_{al_ind}'))
+                copy(os.path.join(system_dir,'CHGCAR'), os.path.join(system_dir,f'CHGCAR_{i}_{al_ind}') )
+            except FileNotFoundError as e:
+                print(e)
+            try: # Same for WAVECAR
+                os.remove(os.path.join(system_dir,'WAVECAR'))
+                os.remove(os.path.join(system_dir,'CHGCAR'))
+            except FileNotFoundError as e:
+                print(e)
 
     elif params['method'] =='GPAW':
         from gpaw import GPAW, KohnShamConvergenceError
