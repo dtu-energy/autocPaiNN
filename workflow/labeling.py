@@ -255,7 +255,6 @@ def main(cfg,system_name,**kwargs):
         database = connect(os.path.join(system_dir,'dft_structures.db'))
         for row in database.select([('converged','=','True')]):
             atom = row.toatoms()
-            atom.info['system'] = args.system
             atom.info['path'] = str(Path('dft_structures.db').resolve())
             train_traj.write(atom)
     
