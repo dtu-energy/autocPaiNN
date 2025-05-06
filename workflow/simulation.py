@@ -25,6 +25,9 @@ def main(cfg,run_list,**kwargs):
     run_list = ast.literal_eval(run_list)
     system_name = run_list[idx]
 
+    # Return to the run directory
+    #return True, {'system_name':system_name}
+
     # Get simulation method and parameters
     system_params = params_simulate['runs'][system_name]
     method = system_params['method']
@@ -59,7 +62,7 @@ def main(cfg,run_list,**kwargs):
         # If iteration >0 then load the previous iteration MD trajcetory 
         if iter_idx > 0:
             # Load the previous iteration MD trajectory 
-            MD_path = os.path.join(run_path,task_name, f'iter_{iter_idx-1}',system_name,'MD.traj')
+            MD_path = os.path.join(run_path,task_name, f'iter_{iter_idx-1}',system_name,'MD.xyz')
             params['init_traj'] = MD_path
 
         # Run the MD simulation

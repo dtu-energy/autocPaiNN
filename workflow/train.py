@@ -183,10 +183,19 @@ def main(cfg, **kwargs):
     with open(cfg, 'r') as f:
         main_params = toml.load(f)
     
+    # Creating the iteration folder and create the return parameters for the next iteration (will be updated later with the number of simualtion runs)
+    if ITER_KW not in kwargs:
+        iter_idx = 0
+    else:
+        iter_idx, *_ = kwargs[ITER_KW]
+        iter_idx += 1
+
     # Find simulation keys
     #run_list = list(main_params['simulate']['runs'].keys())
     #dmkey = len(run_list)
     #return_parameters = {DYNAMICWIDTHGROUP_KEY: dmkey, 'run_list':str(run_list)}
+    # if iter_idx > 0:
+    #   return_parameters[CYCLICALGROUP_KEY] = False
     #return True, return_parameters
 
     # Load local parameters
@@ -204,13 +213,6 @@ def main(cfg, **kwargs):
     # Load argument Namespace
     args = get_arguments()
     update_namespace(args, params)
-
-    # Creating the iteration folder and create the return parameters for the next iteration (will be updated later with the number of simualtion runs)
-    if ITER_KW not in kwargs:
-        iter_idx = 0
-    else:
-        iter_idx, *_ = kwargs[ITER_KW]
-        iter_idx += 1
     
     # Get run path
     run_path = main_params['global']['run_path']

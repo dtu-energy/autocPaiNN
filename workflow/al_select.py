@@ -96,7 +96,7 @@ def main(cfg,system_name,**kwargs):
     import torch
     from cPaiNN.utils import setup_seed
 
-
+    #return True, {'system_name':system_name}
     # Create device
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     logging.info(f"Using device: {device}")
@@ -208,6 +208,9 @@ def main(cfg,system_name,**kwargs):
     if isinstance(args.pool_set, list):
         dataset = []
         for traj in args.pool_set:
+            if not os.path.exists(traj):
+                logging.info(f"File {traj} does not exist!")
+                continue
             if Path(traj).stat().st_size > 0:
                 dataset += read(traj, index=':') 
     

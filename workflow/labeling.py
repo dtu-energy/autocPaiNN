@@ -107,6 +107,15 @@ def main(cfg,system_name,**kwargs):
 
     with open(cfg, 'r') as f:
         main_params = toml.load(f)
+
+    # Find how many models to train and return to the run directory
+    #params_train = main_params['train']
+    #if 'ensemble' in params_train:
+    #    dmkey = len(list(params_train['ensemble'].keys()))
+    #else:
+    #    dmkey = 1
+
+    #return True, {DYNAMICWIDTHGROUP_KEY: dmkey}
     
     # Load local parameters
     task_name = 'labeling'
@@ -160,7 +169,18 @@ def main(cfg,system_name,**kwargs):
     elif args.pool_set:
         if isinstance(args.pool_set, list):
             pool_traj = []
-            for pool_path  in args.pool_set:
+            for pool_path in args.pool_set:
+                # Check if the file exists
+                try: 
+                    os.path.exists(pool_path)
+                except FileNotFoundError:
+                    print(f"File {pool_path} does not exist!")
+                    continue
+                if not os.path.exists(pool_path):
+                    print(f"File {pool_path} does not exist!")
+                    continue
+                
+                # Check if the file is empty and read it if not
                 if Path(pool_path).stat().st_size > 0:
                     pool_traj += read(pool_path, index=':')
         else:
