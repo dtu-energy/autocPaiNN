@@ -8,6 +8,7 @@ from perqueue.constants import DYNAMICWIDTHGROUP_KEY
 
 ### Paths ###
 main_path = Path('./') # path to the auto-cPaiNN code
+workflow = Path('/home/energy/mahpe/Published_code/autocPaiNN') # path to the auto-cPaiNN code
 
 ### Load config file ###
 config = toml.load(main_path/'config.toml')

@@ -114,17 +114,21 @@ def main(cfg,system_name,**kwargs):
 
     # Load local parameters
     task_name = 'select'
-    params = main_params[task_name]
+    params_select = main_params[task_name]
 
     # Add random seed and model path to the trained MLPs
-    params['random_seed'] = main_params['global']['random_seed']
+    params_select['random_seed'] = main_params['global']['random_seed']
     run_path = main_params['global']['run_path']
-    params['model_path'] = os.path.join(run_path,'train', f'iter_{iter_idx}')
+    params_select['model_path'] = os.path.join(run_path,'train', f'iter_{iter_idx}')
     
     # Load the system parameters
-    system_params = params['runs'][system_name]
+    system_params = params_select['runs'][system_name]
     method = system_params['method']
-    params['method'] = method
+    
+    params_select['method'] = method
+
+    # remove runs from params
+    params_select.pop('runs')
 
     # Find the system dataset and update the parameters
     sytem_path = os.path.join(run_path,'simulate', f'iter_{iter_idx}',system_name)
@@ -134,14 +138,17 @@ def main(cfg,system_name,**kwargs):
         pool_set = [os.path.join(sytem_path,'NEB_MD.xyz')]
         args_system_simulate = json.load(open(os.path.join(sytem_path,'arguments.json')))
         neb_img = args_system_simulate['num_img'] + 2 # Including initial and final image
-    
-    params['pool_set'] = pool_set 
+    else:
+        with open(os.path.join(sytem_path,'pool_set.json')) as f:
+            pool_set = json.load(f)      
+
+    params_select['pool_set'] = pool_set 
     # Update the main parameters with the system parameters
-    params.update(system_params)
+    params_select.update(system_params)
 
     # Get the Namespace and update the parameters
     args = get_arguments()
-    update_namespace(args, params)
+    update_namespace(args, params_select)
 
     setup_seed(args.random_seed)
 
@@ -158,7 +165,7 @@ def main(cfg,system_name,**kwargs):
 
     # Save toml parameters
     with open(os.path.join(system_dir, "params.toml"), "w") as f:
-        toml.dump(params, f)
+        toml.dump(params_select, f)
 
     # Load models
     if args.model_name != 'cpainn':
@@ -194,7 +201,7 @@ def main(cfg,system_name,**kwargs):
         format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
         handlers=[
             logging.FileHandler(
-                os.path.join(system_dir,"log.txt"), mode="w"
+                os.path.join(system_dir,"al_log.log"), mode="w"
             ),
             logging.StreamHandler(),
         ],
@@ -246,7 +253,7 @@ def main(cfg,system_name,**kwargs):
         if len(data_dict['pool']) < args.batch_size*10 :
             raise RuntimeError(f"""The pool data set ({len(data_dict['pool'])}) is not large enough for selection!
             It should be larger than 10 times batch size ({args.batch_size*10}).
-            Check your MD simulation!""")
+            Check your simualtion!""")
 
     # Select structures
     al = GeneralActiveLearning(
@@ -270,6 +277,8 @@ def main(cfg,system_name,**kwargs):
     
     # Choose N MD images to be labeled.
     elif args.method == 'MD':
+        indices = al.select(models, data_dict, al_batch_size=args.batch_size)
+    elif args.method == 'optimize':
         indices = al.select(models, data_dict, al_batch_size=args.batch_size)
     else:
         raise RuntimeError("Please give valid method for selection!")

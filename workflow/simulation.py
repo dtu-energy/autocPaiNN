@@ -72,6 +72,10 @@ def main(cfg,run_list,**kwargs):
         from workflow.neb_run import NEB_run
         NEB_run(params,run_dir=system_dir)
 
+    elif method == 'optimize':
+        from workflow.optimize_run import optimize_run
+        optimize_run(params,run_dir=system_dir)
+
     else:
         raise NotImplementedError(f"Method {method} not implemented")
     

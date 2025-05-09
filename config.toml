@@ -66,6 +66,13 @@ time_MD = 10      # The total time of the MD simualtion
 time_step_MD = 1     # The time step of the MD simualtion
 print_step = 1     # The interval for saving MD simulation information
 
+# Main structure optimization parameters. Can be updated by each system #
+[simulate.optimize] 
+opt_steps = 500     #Maxmimum optimization steps
+opt_fmax = 0.05     #Minimum force for the structure optimization
+opt_algo = 'LBFGSLineSearch'
+opt_cell = true
+
 # Here we list the 3 systems used in this workflow (NaCoPO4,NaMnPO4,NaNiPO4,NaFePO4 and NaFePO4_NEB)
 [simulate.runs.NaFePO4_300K]
 method = 'MD'
@@ -77,11 +84,14 @@ method = 'MD'
 temperature = 1000
 init_traj = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4.traj' #CHANGE to correct path. System path
 
-
 [simulate.runs.NaFePO4_NEB]
 method = 'NEB'
 initial_image = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4_init.traj' #CHANGE to correct path. System path
 final_image = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4_final.traj' #CHANGE to correct path. System path
+
+[simulate.runs.NaNiPO4_opt]
+method = 'optimize'
+structure_path = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaNiPO4.traj' #CHANGE to correct path. System path
 
 ### 3) Select step ###
 [select]
@@ -101,6 +111,9 @@ method= 'MD'
 [select.runs.NaFePO4_NEB]
 method= 'NEB' 
 
+[select.runs.NaNiPO4_opt]
+method = 'optimize'
+
 ### 4) Labeling step ###
 [labeling] 
 train_set = '/home/energy/mahpe/Published_code/autocPaiNN/Example_data/NaFePO4_train.xyz' #CHANGE to correct path. Training set datapath.
@@ -118,6 +131,10 @@ ldau_luj = {'Fe'= {'L'= 2, 'U'= 5.3, 'J'= 0}}
 [labeling.runs.NaFePO4_NEB]
 nupdown = 64
 ldau_luj = {'Fe'= {'L'= 2, 'U'= 5.3, 'J'= 0}}
+
+[labeling.runs.NaNiPO4_opt]
+nupdown = 64
+ldau_luj = {'Ni'= {'L'= 2, 'U'= 6.2, 'J'= 0}}
 
 # VASP parameters #
 [labeling.VASP]
