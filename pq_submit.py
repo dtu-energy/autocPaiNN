@@ -6,12 +6,9 @@ from perqueue.task_classes.task import Task
 from perqueue.task_classes.task_groups import CyclicalGroup, Workflow, DynamicWidthGroup, StaticWidthGroup
 from perqueue.constants import DYNAMICWIDTHGROUP_KEY
 
-### Paths ###
-main_path = Path('./') # path to the auto-cPaiNN code
-workflow = Path('/home/energy/mahpe/Published_code/autocPaiNN') # path to the auto-cPaiNN code
-
 ### Load config file ###
-config = toml.load(main_path/'config.toml')
+config_file_path = 'config.toml'# Absolute path to Config.toml file 
+config = toml.load(config_file_path) 
 
 # Setup autocPaiNN workflow path
 workflow = Path(config['global']['workflow_path'])
@@ -39,12 +36,12 @@ Activelearning_resources = '1:local:1h'
 Labeling_resources = '1:local:1h'
 
 ### Set Tasks ###
-main_argument = {'cfg':str(main_path/'config.toml')}
+main_argument = {'cfg':str(config_file_path)}
 
-Train = Task(main_path/'workflow/train.py', name='Train MLP model', args=main_argument, resources=Train_resources)
-Simulation = Task(main_path/'workflow/simulation.py', name='Run ML simulation', args=main_argument, resources=Simulation_resources)
-Activelearning = Task(main_path/'workflow/al_select.py', name='Run active learning', args=main_argument, resources=Activelearning_resources)
-Labeling = Task(main_path/'workflow/labeling.py', name='Run DFT labeling', args=main_argument, resources=Labeling_resources)
+Train = Task(workflow/'workflow/train.py', name='Train MLP model', args=main_argument, resources=Train_resources)
+Simulation = Task(workflow/'workflow/simulation.py', name='Run ML simulation', args=main_argument, resources=Simulation_resources)
+Activelearning = Task(workflow/'workflow/al_select.py', name='Run active learning', args=main_argument, resources=Activelearning_resources)
+Labeling = Task(workflow/'workflow/labeling.py', name='Run DFT labeling', args=main_argument, resources=Labeling_resources)
 
 ### Set Task Groups ###
 # If you perform ensemble training more models are train or else one main model is trained 
